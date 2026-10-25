@@ -51,6 +51,7 @@ class LoggingConfig(BaseModel):
 
 class KnowledgeConfig(BaseModel):
     endpoint: str
+    domain: str
 
 
 class S3ServiceConfig(BaseModel):

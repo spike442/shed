@@ -37,7 +37,7 @@
 - name: Find the SQL files
   ansible.builtin.find:
     paths: "{{ sql_root }}/{{ inventory_hostname }}"
-    patterns: "*.sql"
+    patterns: ["*.sql", "*.sql.j2"]
     recurse: true
   register: sql_files
 

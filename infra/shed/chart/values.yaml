@@ -15,7 +15,7 @@ domains:
   icon: kubernetes
 - id: stonks
   api: /api/stonks
-  icon: terminal
+  icon: candlestick
 
 networkPolicy:
   enabled: true

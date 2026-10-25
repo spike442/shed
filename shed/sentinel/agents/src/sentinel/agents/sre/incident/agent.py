@@ -2,7 +2,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from sentinel.agents.framework.runner import AgentRun, AgentRunner, AgentTask
+from knowledge.client.client import KnowledgeClient
 from sentinel.agents.sre.incident.commands import CommandRunner
 from sentinel.agents.sre.incident.prometheus import Prometheus
 from sentinel.agents.sre.incident.tools import TOOLS, ToolContext
@@ -10,7 +10,7 @@ from sentinel.agents.sre.knowledge import reference_material
 from sentinel.core.contracts.history import PriorAttempt
 from sentinel.core.contracts.incidents import Diagnosis, PreparedIncident
 from sentinel.core.domain import AgentDomain
-from sentinel.core.knowledge import KnowledgeClient
+from shed.agents.runner import AgentRun, AgentRunner, AgentTask
 from shed.core.audit import AuditLog
 
 INVESTIGATE = AgentTask(

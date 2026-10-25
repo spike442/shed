@@ -1,0 +1,8 @@
+apiVersion: v2
+appVersion: 0.1.0
+description: Shed knowledge service, the retrieval API every domain searches its own knowledge through
+name: knowledge
+type: application
+version: 0.1.0
+sources:
+  - https://github.com/spike442/shed

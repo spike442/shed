@@ -5,7 +5,7 @@
     "images",
     "secrets",
     "postgres",
-    "clickhouse",
+    "knowledge",
     "kafka",
     "s3",
     "prometheus",
@@ -18,8 +18,7 @@
       "required": [
         "workflow",
         "sre",
-        "executor",
-        "knowledge"
+        "executor"
       ],
       "additionalProperties": false,
       "properties": {
@@ -30,9 +29,6 @@
           "$ref": "#/definitions/image"
         },
         "executor": {
-          "$ref": "#/definitions/image"
-        },
-        "knowledge": {
           "$ref": "#/definitions/image"
         }
       }
@@ -96,29 +92,6 @@
       "required": [
         "host",
         "database",
-        "user",
-        "knowledgeUser"
-      ],
-      "properties": {
-        "host": {
-          "$ref": "#/definitions/name"
-        },
-        "database": {
-          "$ref": "#/definitions/name"
-        },
-        "user": {
-          "$ref": "#/definitions/name"
-        },
-        "knowledgeUser": {
-          "$ref": "#/definitions/name"
-        }
-      }
-    },
-    "clickhouse": {
-      "type": "object",
-      "required": [
-        "host",
-        "database",
         "user"
       ],
       "properties": {
@@ -130,6 +103,24 @@
         },
         "user": {
           "$ref": "#/definitions/name"
+        }
+      }
+    },
+    "knowledge": {
+      "type": "object",
+      "required": [
+        "url",
+        "domain"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "url": {
+          "type": "string",
+          "minLength": 1
+        },
+        "domain": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
         }
       }
     },

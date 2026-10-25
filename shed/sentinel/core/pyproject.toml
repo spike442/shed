@@ -4,14 +4,12 @@ version = "1.1.0"
 requires-python = ">=3.12"
 dependencies = [
   "shed-core",
+  "knowledge-client",
   "pydantic>=2.10,<3",
   "pydantic-settings[yaml]>=2.7,<3",
 ]
 
 [project.optional-dependencies]
-knowledge-client = [
-  "httpx>=0.28,<1",
-]
 database = [
   "psycopg[binary]>=3.2,<4",
   "SQLAlchemy>=2.0,<3",
@@ -32,6 +30,7 @@ s3 = [
 
 [tool.uv.sources]
 shed-core = { workspace = true }
+knowledge-client = { workspace = true }
 
 [build-system]
 requires = ["setuptools>=75"]

@@ -6,12 +6,14 @@ dependencies = []
 
 [tool.uv.workspace]
 members = [
+  "agents",
   "core",
+  "knowledge/api",
+  "knowledge/client",
   "shed/api",
   "sentinel/agents",
   "sentinel/core",
   "sentinel/executor",
-  "sentinel/knowledge",
   "sentinel/sre",
   "sentinel/workflow",
   "stonks/api",
@@ -39,4 +41,4 @@ quote-style = "double"
 indent-style = "space"
 
 [tool.pytest.ini_options]
-testpaths = ["shed", "sentinel", "stonks"]
+testpaths = ["knowledge", "shed", "sentinel", "stonks"]

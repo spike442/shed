@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import { Boxes, GitPullRequest } from "lucide-react";
+import { Boxes, ChartCandlestick, GitPullRequest } from "lucide-react";
 
 const HEPTAGON = "12,2 19.82,5.77 21.75,14.23 16.34,21.01 7.66,21.01 2.25,14.23 4.18,5.77";
 const SPOKES = [
@@ -25,23 +25,10 @@ function KubernetesIcon() {
   );
 }
 
-function TerminalIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="2" y="3" width="20" height="14" rx="2" />
-      <path d="M8 21h8M12 17v4" />
-      <path d="M7 7v8M17 6v6M12 8v6" />
-      <rect x="6" y="9" width="2" height="3" />
-      <rect x="11" y="10" width="2" height="2.5" />
-      <rect x="16" y="7.5" width="2" height="3" />
-    </svg>
-  );
-}
-
 const ICONS: Record<string, ComponentType<{ "aria-hidden"?: boolean }>> = {
   kubernetes: KubernetesIcon,
   "git-pull-request": GitPullRequest,
-  terminal: TerminalIcon,
+  candlestick: ChartCandlestick,
 };
 
 export function DomainIcon({ icon }: { icon: string | undefined }) {

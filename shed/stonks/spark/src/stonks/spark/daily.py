@@ -1,12 +1,14 @@
 import logging
 from datetime import date
 
-from stonks.spark.bars import bars_summary, yahoo_bars
+from stonks.spark.bars import bars_summary, latest_prices, yahoo_bars
 from stonks.spark.readers import read_raw_charts, read_universe
+from stonks.spark.writers import write_prices
 
 logger = logging.getLogger(__name__)
 
 YAHOO = "yahoo"
+PRICES = "prices"
 
 
 def raw_source_path(storage: dict, s3: dict, source: str) -> str:
@@ -19,15 +21,27 @@ def universe_path(storage: dict, s3: dict, trade_date: date) -> str:
     return f"s3a://{s3['bucket']}/{prefix}/trade_date={trade_date.isoformat()}/universe.json"
 
 
+def curated_path(storage: dict, s3: dict, table: str, trade_date: date) -> str:
+    prefix = storage["curated_prefix"].rstrip("/")
+    return f"s3a://{s3['bucket']}/{prefix}/{table}/trade_date={trade_date.isoformat()}"
+
+
 def run_daily(spark, trade_date: date, storage: dict, s3: dict) -> None:
     charts_path = raw_source_path(storage, s3, YAHOO)
     snapshot_path = universe_path(storage, s3, trade_date)
+    prices_path = curated_path(storage, s3, PRICES, trade_date)
     raw = read_raw_charts(spark, charts_path)
     universe = read_universe(spark, snapshot_path)
     bars = yahoo_bars(raw, universe, trade_date)
-    summary = bars_summary(bars)
+    bars.persist()
+    try:
+        summary = bars_summary(bars)
+        prices = latest_prices(bars)
+        write_prices(prices, prices_path)
+    finally:
+        bars.unpersist()
     logger.info(
-        "yahoo_bars trade_date=%s rows=%s instruments=%s first_date=%s last_date=%s charts=%s universe=%s",
+        "yahoo_bars trade_date=%s rows=%s instruments=%s first_date=%s last_date=%s charts=%s universe=%s prices=%s",
         trade_date,
         summary["rows"],
         summary["instruments"],
@@ -35,4 +49,5 @@ def run_daily(spark, trade_date: date, storage: dict, s3: dict) -> None:
         summary["last_date"],
         charts_path,
         snapshot_path,
+        prices_path,
     )

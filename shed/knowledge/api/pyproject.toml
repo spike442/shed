@@ -1,0 +1,30 @@
+[project]
+name = "knowledge-api"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+  "knowledge-client",
+  "shed-core",
+  "boto3>=1.35,<2",
+  "clickhouse-connect>=0.8,<1",
+  "fastapi>=0.115,<1",
+  "fastembed==0.9.1",
+  "langchain-text-splitters>=1.0,<2",
+  "pydantic>=2.10,<3",
+  "pydantic-settings[yaml]>=2.7,<3",
+  "tokenizers>=0.21,<1",
+  "uvicorn[standard]>=0.34,<1",
+]
+
+[tool.uv.sources]
+knowledge-client = { workspace = true }
+shed-core = { workspace = true }
+
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+namespaces = true
+include = ["knowledge.api*"]

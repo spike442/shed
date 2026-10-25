@@ -1,9 +1,9 @@
 from typing import Literal
 
+from knowledge.client.contracts import RetrievedContext
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sentinel.core.contracts.changes import ProposedChange
 from sentinel.core.contracts.history import PriorAttempt
-from sentinel.core.contracts.knowledge import RetrievedContext
 from sentinel.core.contracts.reviews import RepositoryConfig
 from sentinel.core.domain import (
     ActionStatus,

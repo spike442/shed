@@ -3,13 +3,17 @@ name = "sentinel-sre"
 version = "1.1.0"
 requires-python = ">=3.12"
 dependencies = [
+  "shed-agents",
   "shed-core",
-  "sentinel-agents[sre]",
-  "sentinel-core[kafka,knowledge-client,s3]",
+  "knowledge-client",
+  "sentinel-agents",
+  "sentinel-core[kafka,s3]",
 ]
 
 [tool.uv.sources]
+shed-agents = { workspace = true }
 shed-core = { workspace = true }
+knowledge-client = { workspace = true }
 sentinel-agents = { workspace = true }
 sentinel-core = { workspace = true }
 

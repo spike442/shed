@@ -1,0 +1,11 @@
+extend = "../pyproject.toml"
+src = ["."]
+
+[lint]
+extend-select = ["TID251"]
+
+[lint.flake8-tidy-imports.banned-api]
+"sentinel".msg = "The knowledge service serves every domain and never imports one."
+"stonks".msg = "The knowledge service serves every domain and never imports one."
+"shed.api".msg = "The knowledge service serves every domain and never imports one."
+"shed.agents".msg = "The knowledge service serves every domain and never imports one."

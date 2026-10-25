@@ -39,23 +39,26 @@ pure modules do not import runtime modules. Repositories map missing or rejected
 API errors through the `require_*` helpers in `sentinel.core.state.outcomes`.
 `sentinel.core.domain` holds shared statuses, levels, and `RepositoryIdentity`.
 `sentinel.core.contracts` holds the request and result shapes exchanged by processes, including
-`PullRequest`, `KnowledgeSearchRequest`, and `RetrievedContext`.
+`PullRequest`; the knowledge search shapes (`KnowledgeSearchRequest`, `RetrievedContext`) and `KnowledgeClient` come from
+the knowledge module's `knowledge-client`.
 
-`shed/sentinel/agents/` is a library, not a process: `sentinel.agents.framework` holds the one agent contract
+The agents framework is the shared `agents` module (`shed.agents`, in `shed/agents/`): the one agent contract
 (`AgentTask`, `AgentRun`, and the `AgentRunner` that runs every task the same way), the LangChain model client, the
-structured agent with its per-tool limits and run deadline, the audit middleware, the S3 prompt loader, and the shared
-knowledge tool; each agent (`sentinel.agents.sre.incident`, `sentinel.agents.sre.review`, `sentinel.agents.dividends`) declares
-its tasks, tools, tool context, structured answer, and run message, and runs on the `AgentRunner` its worker builds.
+structured agent with its per-tool limits and run deadline, the audit middleware, and the S3 prompt loader.
+`shed/sentinel/agents/` is a library, not a process: the SRE agents (`sentinel.agents.sre.incident`,
+`sentinel.agents.sre.review`) and the knowledge tool they share (`sentinel.agents.sre.knowledge`). Each agent declares
+its tasks, tools, tool context, structured answer, and run message, and runs on the `AgentRunner` its worker builds; the
+Stonks dividend agent lives in Stonks (`stonks.dividends.agent`) on the same framework.
 Every task's system prompt is `system.md`, then `actions/<action>.md`, then `actions/<tool>.md` for each of its tools. `shed/sentinel/sre/` (`incidents/` and `reviews/`, one process and container, `sentinel.sre.worker`) is the worker that runs those agents:
-they own the Kafka loop, the checkout, the deterministic steps of a run, and policy. `shed/sentinel/knowledge/` owns
-the private knowledge service: retrieval API, embeddings, ClickHouse access, and the
-periodic indexing loop it runs. The UI talks only to the domain backends `/domains.json` lists.
+they own the Kafka loop, the checkout, the deterministic steps of a run, and policy. Knowledge is the Shed knowledge
+service (`shed/knowledge/`, its own module, image, and chart), which Sentinel calls as the domain `sentinel`; Sentinel owns its
+documents and its two tables in the service's `knowledge` ClickHouse database. The UI talks only to the domain backends `/domains.json` lists.
 
 The API can accept requests while workers restart because Kafka retains accepted
 commands. A worker publishes a return before committing its command offset. Sentinel's
 state machine fences stale or repeated returns. PostgreSQL remains the source of truth
 for incident and review status, history, and audit actions.
 
-Sources: `shed/shed/api/src/shed/api/`, `shed/sentinel/core/src/sentinel/core/`, `shed/sentinel/executor/src/sentinel/executor/`, `shed/sentinel/agents/src/sentinel/agents/`, `shed/sentinel/sre/src/sentinel/sre/` (`incidents/`, `reviews/`),
-`shed/sentinel/workflow/src/sentinel/workflow/`, `shed/sentinel/knowledge/src/sentinel/knowledge/`,
+Sources: `shed/shed/api/src/shed/api/`, `shed/sentinel/core/src/sentinel/core/`, `shed/sentinel/executor/src/sentinel/executor/`, `shed/agents/src/shed/agents/`, `shed/sentinel/agents/src/sentinel/agents/`, `shed/sentinel/sre/src/sentinel/sre/` (`incidents/`, `reviews/`),
+`shed/sentinel/workflow/src/sentinel/workflow/`, `shed/knowledge/`,
 and `infra/sentinel/chart/`.

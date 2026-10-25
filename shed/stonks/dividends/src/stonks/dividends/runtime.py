@@ -3,12 +3,12 @@ from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
 from typing import Any
 
-from sentinel.agents.dividends.agent import DividendAgent
-from sentinel.agents.dividends.tools import ResearchSources
-from sentinel.agents.framework.prompts import PromptStore
-from sentinel.agents.framework.runner import AgentRunner
+from shed.agents.prompts import PromptStore
+from shed.agents.runner import AgentRunner
 from stonks.core.http import HttpSource, http_client
 from stonks.core.objects import ObjectStore, s3_client
+from stonks.dividends.agent.agent import DividendAgent
+from stonks.dividends.agent.tools import ResearchSources
 from stonks.dividends.config.settings import ResearchSettings, Settings
 from stonks.dividends.sources.pages import PageReader
 from stonks.dividends.sources.searxng import SearxngSearch

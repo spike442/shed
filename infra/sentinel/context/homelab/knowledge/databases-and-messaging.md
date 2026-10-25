@@ -19,12 +19,12 @@ carry requests, commands, and returns.
 
 ## ClickHouse and local embeddings
 
-The ClickHouse platform app owns its server, volumes, and administrative account. Sentinel owns
-its native backup schedule; Sentinel's `task artifacts` creates its database and user and applies its
-schema before application rollout. Alert evidence and
-the knowledge index live in ClickHouse. Sentinel's knowledge Pod runs the
-pinned ONNX model in process for both search and periodic indexing. Sentinel owns
-chunking and retrieval; agent workers receive excerpts rather than database credentials.
+The ClickHouse platform app owns its server, volumes, and administrative account and its native
+backup schedule. The Shed knowledge service owns the `knowledge` database and user (`task artifacts MODULE=knowledge
+COMPONENT=clickhouse`), and each domain that uses it creates its own tables there (Sentinel's `task artifacts MODULE=sentinel
+COMPONENT=clickhouse`) before application rollout. The knowledge index lives in ClickHouse. The `knowledge` Pod (the
+`agents/knowledge` app) runs the pinned ONNX model in process for both search and periodic indexing and owns chunking and
+retrieval; agent workers receive excerpts rather than database credentials.
 Kopiur copies native backups from a dedicated PVC off-node. Single-node storage provides
 recovery from backup rather than automatic failover.
 

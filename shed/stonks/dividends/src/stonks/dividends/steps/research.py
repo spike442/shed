@@ -1,9 +1,9 @@
 import logging
 from datetime import UTC, date, datetime
 
-from sentinel.agents.dividends.contracts import Security
 from shed.core.audit import AuditLog
 from shed.core.deadline import deadline_after
+from stonks.dividends.agent.contracts import Security
 from stonks.dividends.domain.models import Instrument
 from stonks.dividends.domain.selection import failure_ratio, research_queue
 from stonks.dividends.runtime import ResearchRuntime

@@ -4,14 +4,14 @@ from typing import Any
 from uuid import uuid4
 
 import httpx
+from knowledge.client.client import KnowledgeClient
+from knowledge.client.contracts import KnowledgeSearchRequest, RetrievedContext
 from sentinel.core.config.workflow import IncidentSettings
 from sentinel.core.contracts.history import prior_attempts
 from sentinel.core.contracts.incidents import Alert, IncidentRequest, IncidentResult, PreparedIncident
-from sentinel.core.contracts.knowledge import KnowledgeSearchRequest, RetrievedContext
 from sentinel.core.domain import AgentDomain, AlertStatus
 from sentinel.core.errors import NotFound
 from sentinel.core.kafka.contracts import AgentReturn, WorkflowRequest
-from sentinel.core.knowledge import KnowledgeClient
 from sentinel.core.observability.metrics import cluster_alerts_processed
 from sentinel.workflow.messages import DomainMessages
 from sentinel.workflow.sre.incidents.alertmanager import AlertmanagerClient
@@ -135,5 +135,5 @@ class Investigation:
         return incident
 
     def _search_knowledge(self, query: str) -> list[RetrievedContext]:
-        search = KnowledgeSearchRequest(domain=AgentDomain.SRE, repository=self.repository, query=query)
+        search = KnowledgeSearchRequest(collection=self.repository, tag=AgentDomain.SRE.value, query=query)
         return self.knowledge.search(search)

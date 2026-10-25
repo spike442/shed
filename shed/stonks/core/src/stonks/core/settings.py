@@ -24,6 +24,7 @@ class StorageConfig(BaseModel):
     raw_prefix: str
     universe_prefix: str
     reference_prefix: str
+    curated_prefix: str
 
 
 class HttpConfig(BaseModel):

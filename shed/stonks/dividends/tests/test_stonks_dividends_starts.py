@@ -76,8 +76,8 @@ def test_dividend_steps_start_and_close_their_runtime(monkeypatch, tmp_path) -> 
     monkeypatch.setenv("S3_ACCESS_KEY_ID", "test")
     monkeypatch.setenv("S3_SECRET_ACCESS_KEY", "test")
     monkeypatch.setenv("LLM_API_KEY", "test")
-    from sentinel.agents.dividends.contracts import DividendAnswer
-    from sentinel.agents.framework import runner as agent_runner
+    from shed.agents import runner as agent_runner
+    from stonks.dividends.agent.contracts import DividendAnswer
 
     from stonks.core import http, objects
     from stonks.dividends import main

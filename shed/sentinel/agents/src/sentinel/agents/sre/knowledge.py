@@ -1,12 +1,12 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
 
+from knowledge.client.client import KnowledgeClient
+from knowledge.client.contracts import KnowledgeSearchRequest, RetrievedContext
 from langchain.tools import ToolRuntime
 from langchain_core.tools import BaseTool, tool
-from sentinel.agents.framework.runner import RunContext
-from sentinel.core.contracts.knowledge import KnowledgeSearchRequest, RetrievedContext
 from sentinel.core.domain import AgentDomain
-from sentinel.core.knowledge import KnowledgeClient
+from shed.agents.runner import RunContext
 
 
 @dataclass(frozen=True)
@@ -26,7 +26,7 @@ def search_knowledge_tool(domain: AgentDomain, description: str) -> BaseTool:
     @tool("search_knowledge", description=description)
     def search_knowledge(query: str, runtime: ToolRuntime[KnowledgeContext]) -> str:
         context = runtime.context
-        search = KnowledgeSearchRequest(query=query, domain=domain, repository=context.repository)
+        search = KnowledgeSearchRequest(query=query, collection=context.repository, tag=domain.value)
         return context.knowledge.search_text(search, context.audit)
 
     return search_knowledge

@@ -2,10 +2,10 @@ from datetime import date
 
 from pydantic import BaseModel, Field, SecretStr
 from pydantic_settings import SettingsConfigDict
-from sentinel.agents.dividends.settings import ExcerptConfig
-from sentinel.agents.framework.runner import AgentConfig
+from shed.agents.runner import AgentConfig
 from shed.core.llm import LLMConfig
 from stonks.core.settings import HttpConfig, StonksSettings, config_files
+from stonks.dividends.agent.settings import ExcerptConfig
 
 
 class SearchConfig(BaseModel):

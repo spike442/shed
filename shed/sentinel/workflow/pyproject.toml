@@ -4,11 +4,13 @@ version = "1.1.0"
 requires-python = ">=3.12"
 dependencies = [
   "shed-core",
-  "sentinel-core[knowledge-client,kafka,database,metrics,github]",
+  "knowledge-client",
+  "sentinel-core[kafka,database,metrics,github]",
 ]
 
 [tool.uv.sources]
 shed-core = { workspace = true }
+knowledge-client = { workspace = true }
 sentinel-core = { workspace = true }
 
 [build-system]

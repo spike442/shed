@@ -2,12 +2,12 @@ from datetime import timedelta
 from typing import Any
 from uuid import uuid4
 
+from knowledge.client.client import KnowledgeClient
 from sentinel.core.config.workflow import PrReviewSettings
 from sentinel.core.contracts.reviews import PrReviewRequest
 from sentinel.core.domain import AgentDomain, ReviewTrigger
 from sentinel.core.github import GitHubReader
 from sentinel.core.kafka.contracts import AgentReturn, ExecutorAction, KafkaTopic, RequestKind
-from sentinel.core.knowledge import KnowledgeClient
 from sentinel.core.state import review_rules as rules
 from sentinel.workflow.discord import DiscordWebhook
 from sentinel.workflow.messages import DomainMessages

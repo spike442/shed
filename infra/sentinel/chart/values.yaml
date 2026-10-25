@@ -8,9 +8,6 @@ images:
   executor:
     repository: ghcr.io/spike442/shed/sentinel-executor
     tag: ""
-  knowledge:
-    repository: ghcr.io/spike442/shed/sentinel-knowledge
-    tag: ""
 
 secrets:
   app: sentinel-secrets
@@ -29,12 +26,10 @@ postgres:
   host: postgres0-rw.database.svc.cluster.local
   database: sentinel
   user: sentinel
-  knowledgeUser: sentinel_knowledge
 
-clickhouse:
-  host: clickhouse.database.svc.cluster.local
-  database: sentinel
-  user: sentinel
+knowledge:
+  url: http://knowledge.agents.svc.cluster.local:9092
+  domain: sentinel
 
 kafka:
   bootstrapServers: kafka-kafka-bootstrap.messaging.svc.cluster.local:9093

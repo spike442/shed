@@ -9,6 +9,7 @@ Rows = list[dict[str, Any]]
 class Area(StrEnum):
     UNIVERSE = "universe"
     REFERENCE = "reference"
+    CURATED = "curated"
 
 
 def keyed_rows(document: dict[str, Any], key: str) -> Rows:
@@ -30,6 +31,10 @@ def candidates(document: dict[str, Any]) -> Rows:
     return document["candidates"]["eligible"]
 
 
+def table_rows(document: dict[str, Any]) -> Rows:
+    return sorted(document["rows"], key=lambda row: row.get("symbol") or "")
+
+
 def by_isin(document: dict[str, Any]) -> Rows:
     return keyed_rows(document, "isin")
 
@@ -48,13 +53,14 @@ class Dataset:
 
     @property
     def trade_dated(self) -> bool:
-        return self.area is Area.UNIVERSE
+        return self.area in (Area.UNIVERSE, Area.CURATED)
 
 
 DATASETS = {
     dataset.name: dataset
     for dataset in (
         Dataset("universe", "Universe", Area.UNIVERSE, "universe.json", universe_instruments),
+        Dataset("prices", "Prices", Area.CURATED, "prices", table_rows),
         Dataset("rejections", "Rejections", Area.UNIVERSE, "universe.json", universe_rejections),
         Dataset("candidates", "Candidates", Area.UNIVERSE, "candidates.json", candidates),
         Dataset("dividends", "Dividend dates", Area.REFERENCE, "dividend-dates.json", by_isin),

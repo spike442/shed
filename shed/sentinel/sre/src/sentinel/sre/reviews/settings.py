@@ -1,8 +1,8 @@
 from pydantic import BaseModel, Field
 from pydantic_settings import SettingsConfigDict
-from sentinel.agents.framework.runner import AgentConfig
 from sentinel.core.config.settings import AgentSettings, config_files
 from sentinel.core.domain import ConfidenceLevel, RiskLevel
+from shed.agents.runner import AgentConfig
 
 
 class PrReviewConfig(BaseModel):

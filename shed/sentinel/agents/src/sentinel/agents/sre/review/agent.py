@@ -2,13 +2,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from sentinel.agents.framework.runner import AgentRun, AgentRunner, AgentTask
+from knowledge.client.client import KnowledgeClient
 from sentinel.agents.sre.knowledge import reference_material
 from sentinel.agents.sre.review.tools import FIX_TOOLS, REVIEW_TOOLS, ToolContext
 from sentinel.core.contracts.history import PriorAttempt
 from sentinel.core.contracts.reviews import CheckResult, PreparedPrReview, PrFix, PrReviewResult, PullRequest
 from sentinel.core.domain import AgentDomain, ReviewTrigger
-from sentinel.core.knowledge import KnowledgeClient
+from shed.agents.runner import AgentRun, AgentRunner, AgentTask
 from shed.core.audit import AuditLog
 
 REVIEW = AgentTask(

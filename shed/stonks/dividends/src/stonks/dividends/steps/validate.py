@@ -3,7 +3,7 @@ from collections import Counter
 from datetime import date
 
 import httpx
-from sentinel.agents.dividends.contracts import DividendAnswer, SourceQuote
+from stonks.dividends.agent.contracts import DividendAnswer, SourceQuote
 from stonks.dividends.domain.models import DividendDates, Evidence, Finding, Instrument, Page
 from stonks.dividends.domain.validation import Check, Rules, settled, validate
 from stonks.dividends.runtime import DividendRuntime

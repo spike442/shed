@@ -25,7 +25,7 @@ app.kubernetes.io/instance: {{ .Release.Name | quote }}
 {{- define "sentinel.egress.knowledge" -}}
 - toEndpoints:
   - matchLabels:
-      app.kubernetes.io/name: sentinel-knowledge
+      app.kubernetes.io/name: knowledge
   toPorts:
   - ports:
     - {port: "9092", protocol: TCP}

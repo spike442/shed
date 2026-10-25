@@ -43,9 +43,10 @@ tasks:
       - |-
         module="{{.MODULE}}"
         if [ -z "$module" ]; then
-          module="$(gum choose --header 'Select module' sentinel stonks)"
+          module="$(gum choose --header 'Select module' knowledge sentinel stonks)"
         fi
         case "$module" in
+          knowledge) components="clickhouse" ;;
           sentinel) components="all clickhouse postgresql s3" ;;
           stonks) components="s3 logs" ;;
           *) echo "Unsupported module: $module" >&2; exit 1 ;;
@@ -59,17 +60,18 @@ tasks:
           *) echo "Unsupported $module component: $component (choose from: $components)" >&2; exit 1 ;;
         esac
         case "$module/$component" in
+          knowledge/clickhouse) hosts="clickhouse" ;;
           sentinel/all) hosts="clickhouse,postgresql,s3" ;;
           sentinel/*) hosts="$component" ;;
           stonks/s3) hosts="stonks-s3" ;;
           stonks/logs) hosts="stonks-logs" ;;
         esac
-        ansible-playbook deploy.yaml --limit "$hosts" -v {{.CLI_ARGS}}
+        ansible-playbook deploy.yaml --limit "$hosts" --extra-vars "sql_module=$module" -v {{.CLI_ARGS}}
 
   rollout:
-    desc: Reconcile the Shed, Sentinel, and Stonks Flux Kustomizations
+    desc: Reconcile the Shed, knowledge, Sentinel, and Stonks Flux Kustomizations
     vars:
       NAMESPACE: '{{.NAMESPACE | default "agents"}}'
     cmds:
-      - for: [shed, sentinel, stonks]
+      - for: [shed, knowledge, sentinel, stonks]
         cmd: flux reconcile kustomization {{.ITEM}} --namespace '{{.NAMESPACE}}' --with-source

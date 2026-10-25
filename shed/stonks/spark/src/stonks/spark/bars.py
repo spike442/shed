@@ -14,6 +14,14 @@ BAR_COLUMNS = (
     "exchange",
     "fetched_at",
 )
+PRICE_COLUMNS = (
+    "isin",
+    "symbol",
+    "bar_date",
+    *SERIES_FIELDS,
+    "currency",
+    "exchange",
+)
 
 
 def successful_fetches(raw: DataFrame, trade_date: date) -> DataFrame:
@@ -81,6 +89,13 @@ def yahoo_bars(raw: DataFrame, universe: DataFrame, trade_date: date) -> DataFra
     listed = current_listing(traded, universe)
     newest = newest_per_day(listed)
     return newest.select(*BAR_COLUMNS)
+
+
+def latest_prices(bars: DataFrame) -> DataFrame:
+    newest_first = Window.partitionBy("isin").orderBy(F.col("bar_date").desc())
+    ranked = bars.withColumn("bar_rank", F.row_number().over(newest_first))
+    latest = ranked.where(F.col("bar_rank") == 1)
+    return latest.select(*PRICE_COLUMNS)
 
 
 def bars_summary(bars: DataFrame) -> dict:

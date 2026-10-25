@@ -3,12 +3,12 @@ import threading
 from collections.abc import Callable
 from contextlib import ExitStack
 
+from knowledge.client.client import KnowledgeClient
 from sentinel.core.config.workflow import IncidentSettings, PrReviewSettings, WorkflowAgents
 from sentinel.core.domain import AgentDomain
 from sentinel.core.github import READ_ONLY, GitHubAppAuth, GitHubReader
 from sentinel.core.kafka.consumer import exit_on_signals
 from sentinel.core.kafka.contracts import KafkaTopic
-from sentinel.core.knowledge import KnowledgeClient
 from sentinel.core.observability.logging import configure_logging
 from sentinel.core.persistence.postgres import PostgresDatabase
 from sentinel.workflow.discord import DiscordWebhook
@@ -67,7 +67,7 @@ def main() -> None:
     with ExitStack() as resources:
         database = PostgresDatabase(settings.database_dsn)
         resources.callback(database.close)
-        knowledge = KnowledgeClient(settings.knowledge.endpoint)
+        knowledge = KnowledgeClient(settings.knowledge.endpoint, settings.knowledge.domain)
         resources.callback(knowledge.close)
         discord = DiscordWebhook(settings.discord_webhook_url)
         resources.callback(discord.close)

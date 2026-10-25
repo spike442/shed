@@ -22,6 +22,8 @@ jobs:
       contents: read
     outputs:
       core: ${{ steps.core.outputs.changed == 'true' && steps.core.outputs.version || '' }}
+      agents: ${{ steps.agents.outputs.changed == 'true' && steps.agents.outputs.version || '' }}
+      knowledge: ${{ steps.knowledge.outputs.changed == 'true' && steps.knowledge.outputs.version || '' }}
       shed: ${{ steps.shed.outputs.changed == 'true' && steps.shed.outputs.version || '' }}
       sentinel: ${{ steps.sentinel.outputs.changed == 'true' && steps.sentinel.outputs.version || '' }}
       stonks: ${{ steps.stonks.outputs.changed == 'true' && steps.stonks.outputs.version || '' }}
@@ -35,32 +37,45 @@ jobs:
           tag_prefix: core-
           version_format: ${major}.${minor}.${patch}
           change_path: shed/core shed/pyproject.toml
+      - id: agents
+        uses: paulhatch/semantic-version@9f72830310d5ed81233b641ee59253644cd8a8fc # v6.0.2
+        with:
+          tag_prefix: agents-
+          version_format: ${major}.${minor}.${patch}
+          change_path: shed/agents shed/core shed/pyproject.toml
+      - id: knowledge
+        uses: paulhatch/semantic-version@9f72830310d5ed81233b641ee59253644cd8a8fc # v6.0.2
+        with:
+          tag_prefix: knowledge-
+          version_format: ${major}.${minor}.${patch}
+          change_path: shed/knowledge infra/knowledge shed/core shed/pyproject.toml
       - id: shed
         uses: paulhatch/semantic-version@9f72830310d5ed81233b641ee59253644cd8a8fc # v6.0.2
         with:
           tag_prefix: shed-
           version_format: ${major}.${minor}.${patch}
-          change_path: shed/shed infra/shed shed/core shed/sentinel/core :(exclude)shed/sentinel/core/pyproject.toml shed/pyproject.toml
+          change_path: shed/shed infra/shed shed/core shed/knowledge/client :(exclude)shed/knowledge/client/pyproject.toml shed/sentinel/core :(exclude)shed/sentinel/core/pyproject.toml shed/pyproject.toml
       - id: sentinel
         uses: paulhatch/semantic-version@9f72830310d5ed81233b641ee59253644cd8a8fc # v6.0.2
         with:
           tag_prefix: sentinel-
           version_format: ${major}.${minor}.${patch}
-          change_path: shed/sentinel infra/sentinel shed/core shed/pyproject.toml
+          change_path: shed/sentinel infra/sentinel shed/core shed/agents shed/knowledge/client :(exclude)shed/knowledge/client/pyproject.toml shed/pyproject.toml
       - id: stonks
         uses: paulhatch/semantic-version@9f72830310d5ed81233b641ee59253644cd8a8fc # v6.0.2
         with:
           tag_prefix: stonks-
           version_format: ${major}.${minor}.${patch}
-          change_path: shed/stonks infra/stonks shed/core shed/sentinel/agents :(exclude)shed/sentinel/agents/pyproject.toml shed/pyproject.toml
+          change_path: shed/stonks infra/stonks shed/core shed/agents shed/pyproject.toml
 
   shed:
     name: Publish
     needs: plan
-    if: needs.plan.outputs.shed != '' || needs.plan.outputs.sentinel != '' || needs.plan.outputs.stonks != ''
+    if: needs.plan.outputs.knowledge != '' || needs.plan.outputs.shed != '' || needs.plan.outputs.sentinel != '' || needs.plan.outputs.stonks != ''
     uses: ./.github/workflows/shed.yml
     with:
       publish: true
+      knowledge-version: ${{ needs.plan.outputs.knowledge }}
       shed-version: ${{ needs.plan.outputs.shed }}
       sentinel-version: ${{ needs.plan.outputs.sentinel }}
       stonks-version: ${{ needs.plan.outputs.stonks }}
@@ -84,33 +99,34 @@ jobs:
           python-version: "3.12"
       - name: Record released versions
         env:
-          RELEASES: core=${{ needs.plan.outputs.core }} shed=${{ needs.plan.outputs.shed }} sentinel=${{ needs.plan.outputs.sentinel }} stonks=${{ needs.plan.outputs.stonks }}
+          RELEASES: core=${{ needs.plan.outputs.core }} agents=${{ needs.plan.outputs.agents }} knowledge=${{ needs.plan.outputs.knowledge }} shed=${{ needs.plan.outputs.shed }} sentinel=${{ needs.plan.outputs.sentinel }} stonks=${{ needs.plan.outputs.stonks }}
         run: |
           for release in $RELEASES; do
             module="${release%%=*}"
             version="${release#*=}"
             [[ -n "$version" ]] || continue
-            if [[ "$module" == core ]]; then
-              uv version "$version" --frozen --directory shed/core
-              uv version "$version" --frozen --directory shed
-              continue
+            if [[ -f "infra/$module/chart/Chart.yaml" ]]; then
+              projects=(shed/"$module"/*/pyproject.toml)
+              sed -i -e "s/^version: .*/version: $version/" -e "s/^appVersion: .*/appVersion: $version/" "infra/$module/chart/Chart.yaml"
+            else
+              projects=(shed/"$module"/pyproject.toml)
             fi
-            for project in shed/"$module"/*/pyproject.toml; do
+            [[ "$module" != core ]] || projects+=(shed/pyproject.toml)
+            for project in "${projects[@]}"; do
               uv version "$version" --frozen --directory "$(dirname "$project")"
             done
-            sed -i -e "s/^version: .*/version: $version/" -e "s/^appVersion: .*/appVersion: $version/" "infra/$module/chart/Chart.yaml"
           done
           uv lock --directory shed
       - id: commit
         name: Commit released versions
         uses: stefanzweifel/git-auto-commit-action@4a55954c782fc1ea30b9056cd3e7a2b40ca8887d # v7.2.0
         with:
-          commit_message: "chore(release): ${{ needs.plan.outputs.core && format('core {0} ', needs.plan.outputs.core) || '' }}${{ needs.plan.outputs.shed && format('shed {0} ', needs.plan.outputs.shed) || '' }}${{ needs.plan.outputs.sentinel && format('sentinel {0} ', needs.plan.outputs.sentinel) || '' }}${{ needs.plan.outputs.stonks && format('stonks {0}', needs.plan.outputs.stonks) || '' }}"
+          commit_message: "chore(release): ${{ needs.plan.outputs.core && format('core {0} ', needs.plan.outputs.core) || '' }}${{ needs.plan.outputs.agents && format('agents {0} ', needs.plan.outputs.agents) || '' }}${{ needs.plan.outputs.knowledge && format('knowledge {0} ', needs.plan.outputs.knowledge) || '' }}${{ needs.plan.outputs.shed && format('shed {0} ', needs.plan.outputs.shed) || '' }}${{ needs.plan.outputs.sentinel && format('sentinel {0} ', needs.plan.outputs.sentinel) || '' }}${{ needs.plan.outputs.stonks && format('stonks {0}', needs.plan.outputs.stonks) || '' }}"
           branch: ${{ github.ref_name }}
       - name: Tag released modules
         env:
           COMMIT: ${{ steps.commit.outputs.commit_hash || github.sha }}
-          RELEASES: core-${{ needs.plan.outputs.core }} shed-${{ needs.plan.outputs.shed }} sentinel-${{ needs.plan.outputs.sentinel }} stonks-${{ needs.plan.outputs.stonks }}
+          RELEASES: core-${{ needs.plan.outputs.core }} agents-${{ needs.plan.outputs.agents }} knowledge-${{ needs.plan.outputs.knowledge }} shed-${{ needs.plan.outputs.shed }} sentinel-${{ needs.plan.outputs.sentinel }} stonks-${{ needs.plan.outputs.stonks }}
         run: |
           for tag in $RELEASES; do
             if [[ "$tag" != *- ]]; then

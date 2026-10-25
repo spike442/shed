@@ -3,11 +3,13 @@ name = "stonks-dividends"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
-  "sentinel-agents[dividends]",
+  "shed-agents",
   "shed-core",
   "stonks-core",
   "exchange-calendars>=4.13,<5",
   "httpx>=0.28,<1",
+  "langchain>=1.4,<2",
+  "langchain-core>=1.6,<2",
   "pydantic>=2.10,<3",
   "pydantic-settings[yaml]>=2.7,<3",
   "pypdf>=5,<7",
@@ -15,7 +17,7 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-sentinel-agents = { workspace = true }
+shed-agents = { workspace = true }
 shed-core = { workspace = true }
 stonks-core = { workspace = true }
 

@@ -56,7 +56,7 @@ def create_app() -> FastAPI:
         return {
             "id": "stonks",
             "label": "Stonks",
-            "icon": "terminal",
+            "icon": "candlestick",
             "kind": "data",
             "version": release,
             "enabled": True,

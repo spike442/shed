@@ -6,7 +6,7 @@ WORKDIR /app
 ENV UV_PYTHON_DOWNLOADS=0
 COPY shed/pyproject.toml shed/uv.lock ./
 COPY shed/core ./core
-COPY shed/sentinel/agents ./sentinel/agents
+COPY shed/agents ./agents
 COPY shed/stonks/core ./stonks/core
 COPY shed/stonks/dividends ./stonks/dividends
 ARG VERSION

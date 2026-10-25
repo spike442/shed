@@ -4,8 +4,10 @@ import shutil
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import pyarrow
 from botocore.exceptions import ClientError
 from fastapi.testclient import TestClient
+from pyarrow import parquet
 
 CHART_CONFIG = Path(__file__).parents[4] / "infra" / "stonks" / "chart" / "config"
 UNIVERSE = {
@@ -13,10 +15,22 @@ UNIVERSE = {
     "universe": {"instruments": [{"isin": "DE0007164600", "symbol": "SAP.DE"}], "rejections": []},
 }
 
+PRICES = [{"isin": "DE0007164600", "symbol": "SAP.DE", "bar_date": "2026-10-21", "close": 241.5, "volume": 1200}]
+
+
+def parquet_bytes(rows: list[dict]) -> bytes:
+    table = pyarrow.Table.from_pylist(rows)
+    buffer = io.BytesIO()
+    parquet.write_table(table, buffer)
+    return buffer.getvalue()
+
 
 class MemoryS3:
     def __init__(self):
-        self.objects = {"universe/trade_date=2026-10-21/universe.json": json.dumps(UNIVERSE).encode()}
+        self.objects = {
+            "universe/trade_date=2026-10-21/universe.json": json.dumps(UNIVERSE).encode(),
+            "curated/prices/trade_date=2026-10-21/part-00000.snappy.parquet": parquet_bytes(PRICES),
+        }
         self.closed = False
 
     def get_object(self, Bucket, Key):
@@ -52,7 +66,9 @@ def test_stonks_api_starts_and_serves_datasets(monkeypatch, tmp_path) -> None:
     with TestClient(app) as client:
         ready = client.get("/api/stonks/readyz")
         universe = client.get("/api/stonks/datasets/universe")
+        prices = client.get("/api/stonks/datasets/prices")
 
     assert ready.json()["status"] == "ready"
     assert universe.json()["rows"] == UNIVERSE["universe"]["instruments"]
+    assert prices.json()["rows"] == PRICES
     assert storage.closed

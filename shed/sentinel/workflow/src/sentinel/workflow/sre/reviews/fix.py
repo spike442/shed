@@ -1,6 +1,7 @@
 import logging
 
 import httpx
+from knowledge.client.client import KnowledgeClient
 from pydantic import BaseModel
 from sentinel.core.config.workflow import PrReviewSettings
 from sentinel.core.contracts.executor import FixPushed
@@ -14,7 +15,6 @@ from sentinel.core.contracts.reviews import (
 from sentinel.core.domain import ReviewTrigger
 from sentinel.core.github import GitHubReader
 from sentinel.core.kafka.contracts import AgentReturn, ExecutorAction, ExecutorReturn, WorkflowRequest
-from sentinel.core.knowledge import KnowledgeClient
 from sentinel.workflow.messages import DomainMessages
 from sentinel.workflow.routing import required_record
 from sentinel.workflow.sre.reviews import fix_policy

@@ -57,10 +57,13 @@ class ObjectStore:
         body = json_lines(records)
         return self.put_text(key, body, "application/x-ndjson")
 
-    def get_text(self, key: str) -> str:
+    def get_bytes(self, key: str) -> bytes:
         response = self.client.get_object(Bucket=self.bucket, Key=key)
         with response["Body"] as body:
-            content = body.read()
+            return body.read()
+
+    def get_text(self, key: str) -> str:
+        content = self.get_bytes(key)
         return content.decode("utf-8")
 
     def find_text(self, key: str) -> str | None:

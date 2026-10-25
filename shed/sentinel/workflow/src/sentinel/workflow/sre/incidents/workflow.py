@@ -8,10 +8,10 @@ and reach agents and sentinel-executor through ``DomainMessages``.
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+from knowledge.client.client import KnowledgeClient
 from sentinel.core.config.workflow import IncidentSettings
 from sentinel.core.domain import AgentDomain
 from sentinel.core.kafka.contracts import ExecutorAction, KafkaTopic, RequestKind, WorkflowRequest
-from sentinel.core.knowledge import KnowledgeClient
 from sentinel.core.state import incident_rules as rules
 from sentinel.workflow.discord import DiscordWebhook
 from sentinel.workflow.messages import DomainMessages

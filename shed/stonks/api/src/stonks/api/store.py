@@ -1,6 +1,8 @@
+import io
 import re
 from datetime import date
 
+from pyarrow import parquet
 from stonks.api.datasets import Area, Dataset
 from stonks.core.objects import ObjectStore
 from stonks.core.settings import StorageConfig
@@ -13,6 +15,7 @@ class StonksReader:
         self.objects = objects
         self.universe_prefix = storage.universe_prefix.rstrip("/")
         self.reference_prefix = storage.reference_prefix.rstrip("/")
+        self.curated_prefix = storage.curated_prefix.rstrip("/")
 
     def trade_dates(self) -> list[date]:
         keys = self.objects.keys(f"{self.universe_prefix}/")
@@ -20,7 +23,23 @@ class StonksReader:
         days = [date.fromisoformat(day) for day in found]
         return sorted(days, reverse=True)
 
+    def curated_table(self, table: str, trade_date: date) -> dict | None:
+        prefix = f"{self.curated_prefix}/{table}/trade_date={trade_date.isoformat()}/"
+        keys = self.objects.keys(prefix)
+        files = [key for key in keys if key.endswith(".parquet")]
+        if not files:
+            return None
+        rows = []
+        for key in files:
+            content = self.objects.get_bytes(key)
+            buffer = io.BytesIO(content)
+            loaded = parquet.read_table(buffer)
+            rows.extend(loaded.to_pylist())
+        return {"rows": rows}
+
     def document(self, dataset: Dataset, trade_date: date | None) -> dict | None:
+        if dataset.area is Area.CURATED:
+            return self.curated_table(dataset.document, trade_date)
         if dataset.area is Area.UNIVERSE:
             key = f"{self.universe_prefix}/trade_date={trade_date.isoformat()}/{dataset.document}"
         else:

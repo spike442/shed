@@ -1,0 +1,11 @@
+extend = "../pyproject.toml"
+src = ["."]
+
+[lint]
+extend-select = ["TID251"]
+
+[lint.flake8-tidy-imports.banned-api]
+"sentinel".msg = "The agents framework serves every domain and never imports one."
+"stonks".msg = "The agents framework serves every domain and never imports one."
+"shed.api".msg = "The agents framework serves every domain and never imports one."
+"knowledge".msg = "The agents framework serves every domain and never imports one."

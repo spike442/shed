@@ -1,5 +1,5 @@
-from sentinel.agents.dividends.contracts import SearchResult
 from stonks.core.http import HttpSource
+from stonks.dividends.agent.contracts import SearchResult
 from stonks.dividends.config.settings import SearchConfig
 
 

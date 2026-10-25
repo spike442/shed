@@ -1,9 +1,10 @@
 import json
 
+from knowledge.client.client import KnowledgeClient
+from knowledge.client.contracts import KnowledgeSearchRequest, RetrievedContext
 from pydantic import TypeAdapter
 from sentinel.core.config.workflow import PrReviewSettings
 from sentinel.core.contracts.history import prior_attempts
-from sentinel.core.contracts.knowledge import KnowledgeSearchRequest, RetrievedContext
 from sentinel.core.contracts.reviews import (
     DecidedPrReview,
     PreparedPrReview,
@@ -13,7 +14,6 @@ from sentinel.core.contracts.reviews import (
 )
 from sentinel.core.domain import AgentDomain
 from sentinel.core.kafka.contracts import AgentReturn, WorkflowRequest
-from sentinel.core.knowledge import KnowledgeClient
 from sentinel.workflow.messages import DomainMessages
 from sentinel.workflow.sre.reviews.merge import Merge
 from sentinel.workflow.sre.reviews.repository import PrReviewRepository
@@ -30,7 +30,7 @@ def search_review_knowledge(
 ) -> list[RetrievedContext]:
     pull_request_fields = pull_request.model_dump(mode="json")
     query = json.dumps(pull_request_fields, sort_keys=True)
-    search = KnowledgeSearchRequest(domain=AgentDomain.PULL_REQUEST_REVIEW, repository=scope, query=query)
+    search = KnowledgeSearchRequest(collection=scope, tag=AgentDomain.PULL_REQUEST_REVIEW.value, query=query)
     return knowledge.search(search)
 
 

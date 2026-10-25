@@ -17,6 +17,7 @@ WORKDIR /app
 ENV UV_PYTHON_DOWNLOADS=0
 COPY shed/pyproject.toml shed/uv.lock ./
 COPY shed/core ./core
+COPY shed/knowledge/client ./knowledge/client
 COPY shed/sentinel/core ./sentinel/core
 COPY shed/sentinel/executor ./sentinel/executor
 ARG VERSION

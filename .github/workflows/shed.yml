@@ -9,6 +9,9 @@ on:
       shed-version:
         type: string
         default: ""
+      knowledge-version:
+        type: string
+        default: ""
       sentinel-version:
         type: string
         default: ""
@@ -44,16 +47,23 @@ jobs:
             shed:
               - *shared
               - shed/shed/**
+              - shed/knowledge/client/**
               - shed/sentinel/core/**
               - infra/shed/**
+            knowledge:
+              - *shared
+              - shed/knowledge/**
+              - infra/knowledge/**
             sentinel:
               - *shared
               - shed/sentinel/**
+              - shed/agents/**
+              - shed/knowledge/client/**
               - infra/sentinel/**
             stonks:
               - *shared
               - shed/stonks/**
-              - shed/sentinel/agents/**
+              - shed/agents/**
               - infra/stonks/**
       - id: images
         name: Select images
@@ -173,7 +183,7 @@ jobs:
           version: v4.3.1
       - uses: helm/chart-testing-action@720270857a28afd41e2426521a7801db09e9b510 # v2.9.0
       - name: Lint chart with each CI values file
-        run: ct lint --charts infra/shed/chart,infra/sentinel/chart,infra/stonks/chart --validate-maintainers=false --check-version-increment=false --helm-lint-extra-args=--strict
+        run: ct lint --charts infra/knowledge/chart,infra/shed/chart,infra/sentinel/chart,infra/stonks/chart --validate-maintainers=false --check-version-increment=false --helm-lint-extra-args=--strict
 
   images:
     name: Image (${{ matrix.image }})
@@ -254,9 +264,10 @@ jobs:
           INPUTS: ${{ toJSON(inputs) }}
         run: |
           printf '%s' "$GHCR_TOKEN" | helm registry login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
-          for chart in shed sentinel stonks; do
-            version="$(jq -r --arg chart "$chart" '.[$chart + "-version"]' <<< "$INPUTS")"
+          for directory in infra/*/chart; do
+            chart="$(basename "$(dirname "$directory")")"
+            version="$(jq -r --arg chart "$chart" '.[$chart + "-version"] // empty' <<< "$INPUTS")"
             [[ -n "$version" ]] || continue
-            helm package "infra/$chart/chart" --version "$version" --app-version "$version" --destination "$RUNNER_TEMP"
+            helm package "$directory" --version "$version" --app-version "$version" --destination "$RUNNER_TEMP"
             helm push "$RUNNER_TEMP/$chart-$version.tgz" oci://ghcr.io/spike442/charts/shed
           done
