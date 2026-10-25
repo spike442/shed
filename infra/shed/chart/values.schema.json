@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": [
+    "image",
+    "sentinel",
+    "domains",
+    "route"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "image": {
+      "$ref": "#/definitions/image"
+    },
+    "sentinel": {
+      "type": "object",
+      "required": [
+        "configMap",
+        "secret",
+        "kafkaUsername"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "configMap": {
+          "$ref": "#/definitions/name"
+        },
+        "secret": {
+          "$ref": "#/definitions/name"
+        },
+        "kafkaUsername": {
+          "$ref": "#/definitions/name"
+        }
+      }
+    },
+    "annotations": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "domains": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "api"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "$ref": "#/definitions/name"
+          },
+          "api": {
+            "type": "string",
+            "pattern": "^/"
+          },
+          "icon": {
+            "$ref": "#/definitions/name"
+          }
+        }
+      }
+    },
+    "networkPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "monitoringNamespace": {
+          "$ref": "#/definitions/name"
+        }
+      }
+    },
+    "route": {
+      "type": "object",
+      "required": [
+        "hostname",
+        "gatewayName",
+        "gatewayNamespace"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "hostname": {
+          "$ref": "#/definitions/name"
+        },
+        "gatewayName": {
+          "$ref": "#/definitions/name"
+        },
+        "gatewayNamespace": {
+          "$ref": "#/definitions/name"
+        }
+      }
+    }
+  },
+  "definitions": {
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "image": {
+      "type": "object",
+      "required": [
+        "repository"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "repository": {
+          "$ref": "#/definitions/name"
+        },
+        "tag": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

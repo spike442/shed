@@ -6,10 +6,10 @@ tasks:
       - task --list
 
   setup:
-    desc: Install Sentinel and its UI dependencies
+    desc: Install the Shed workspace and the Shed UI dependencies
     cmds:
-      - cd sentinel && uv sync --locked --all-packages --group dev
-      - npm --prefix sentinel/console/ui ci
+      - cd shed && uv sync --locked --all-packages --group dev
+      - npm --prefix shed/shed/ui ci
       - pre-commit install
 
   lint:
@@ -19,11 +19,11 @@ tasks:
 
   ui:
     desc: Serve the UI
-    dir: sentinel/console/ui
+    dir: shed/shed/ui
     vars:
-      SENTINEL_API_URL: '{{.SENTINEL_API_URL | default "https://sentinel.timcasa.me/api"}}'
+      CONSOLE_API_URL: '{{.CONSOLE_API_URL | default "https://sentinel.timcasa.me/api"}}'
     env:
-      SENTINEL_API_URL: '{{.SENTINEL_API_URL}}'
+      CONSOLE_API_URL: '{{.CONSOLE_API_URL}}'
     cmds:
       - npm run dev
 
@@ -33,26 +33,43 @@ tasks:
     cmds:
       - ansible-galaxy collection install -r requirements.yaml
 
-  sql-s3:
-    desc: Deploy one fresh-install component
+  artifacts:
+    desc: Deploy one fresh-install component of a module, asking for the module and then its component
+    silent: true
     dir: infra/ansible
     env:
       ANSIBLE_CONFIG: ansible.cfg
     cmds:
       - |-
+        module="{{.MODULE}}"
+        if [ -z "$module" ]; then
+          module="$(gum choose --header 'Select module' sentinel stonks)"
+        fi
+        case "$module" in
+          sentinel) components="all clickhouse postgresql s3" ;;
+          stonks) components="s3 logs" ;;
+          *) echo "Unsupported module: $module" >&2; exit 1 ;;
+        esac
         component="{{.COMPONENT}}"
         if [ -z "$component" ]; then
-          component="$(gum choose --header 'Select deployment component' all clickhouse postgresql s3 stonks-s3)"
+          component="$(gum choose --header "Select $module component" $components)"
         fi
-        case "$component" in
-          all|clickhouse|postgresql|s3|stonks-s3) ;;
-          *) echo "Unsupported deployment component: $component" >&2; exit 1 ;;
+        case " $components " in
+          *" $component "*) ;;
+          *) echo "Unsupported $module component: $component (choose from: $components)" >&2; exit 1 ;;
         esac
-        ansible-playbook deploy.yaml --limit "$component" -v {{.CLI_ARGS}}
+        case "$module/$component" in
+          sentinel/all) hosts="clickhouse,postgresql,s3" ;;
+          sentinel/*) hosts="$component" ;;
+          stonks/s3) hosts="stonks-s3" ;;
+          stonks/logs) hosts="stonks-logs" ;;
+        esac
+        ansible-playbook deploy.yaml --limit "$hosts" -v {{.CLI_ARGS}}
 
   rollout:
-    desc: Reconcile the Sentinel Flux Kustomization
+    desc: Reconcile the Shed, Sentinel, and Stonks Flux Kustomizations
     vars:
       NAMESPACE: '{{.NAMESPACE | default "agents"}}'
     cmds:
-      - flux reconcile kustomization sentinel --namespace '{{.NAMESPACE}}' --with-source
+      - for: [shed, sentinel, stonks]
+        cmd: flux reconcile kustomization {{.ITEM}} --namespace '{{.NAMESPACE}}' --with-source

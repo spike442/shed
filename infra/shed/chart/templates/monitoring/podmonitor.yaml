@@ -1,0 +1,15 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  labels:
+    app.kubernetes.io/name: shed
+{{ include "shed.standardLabels" . | indent 4 }}
+  name: shed
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: shed
+  podMetricsEndpoints:
+  - port: metrics
+    interval: 60s

@@ -1,0 +1,27 @@
+image:
+  repository: ghcr.io/spike442/shed/shed
+  tag: ""
+
+sentinel:
+  configMap: sentinel-config
+  secret: sentinel-secrets
+  kafkaUsername: sentinel
+
+annotations: {}
+
+domains:
+- id: sre
+  api: /api/sre
+  icon: kubernetes
+- id: stonks
+  api: /api/stonks
+  icon: terminal
+
+networkPolicy:
+  enabled: true
+  monitoringNamespace: observability
+
+route:
+  hostname: sentinel.example.test
+  gatewayName: gateway
+  gatewayNamespace: network

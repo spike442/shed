@@ -4,18 +4,22 @@ on:
   pull_request:
   push:
     branches: [main]
+  schedule:
+    - cron: "0 5 * * 1"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: sentinel-ci-${{ github.ref }}
+  group: shed-ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  sentinel:
+  shed:
     name: CI
-    uses: ./.github/workflows/sentinel.yml
+    uses: ./.github/workflows/shed.yml
     permissions:
       contents: read
+      pull-requests: read
+      security-events: write

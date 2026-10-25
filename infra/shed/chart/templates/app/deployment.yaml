@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shed
+  namespace: {{ .Release.Namespace }}
+{{- with .Values.annotations }}
+  annotations:
+{{ toYaml . | indent 4 }}
+{{- end }}
+  labels:
+{{ include "shed.standardLabels" . | indent 4 }}
+    app.kubernetes.io/name: shed
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: shed
+  template:
+    metadata:
+      annotations:
+        checksum/domains: {{ include (print $.Template.BasePath "/app/configmap.yaml") . | sha256sum }}
+      labels:
+{{ include "shed.standardLabels" . | indent 8 }}
+        app.kubernetes.io/name: shed
+    spec:
+      serviceAccountName: shed
+      terminationGracePeriodSeconds: 300
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: shed
+        image: {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8070
+        - name: metrics
+          containerPort: 9100
+        startupProbe:
+          httpGet:
+            path: /api/healthz
+            port: http
+          failureThreshold: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/readyz
+            port: http
+        livenessProbe:
+          httpGet:
+            path: /api/healthz
+            port: http
+        env:
+        - name: HOME
+          value: /home/shed
+        - name: SENTINEL_KAFKA_USERNAME
+          value: {{ .Values.sentinel.kafkaUsername | quote }}
+        - name: SENTINEL_KAFKA_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.sentinel.secret }}
+              key: KAFKA_PASSWORD
+        - name: SENTINEL_DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.sentinel.secret }}
+              key: DATABASE_PASSWORD
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: [ALL]
+        resources:
+          requests:
+            cpu: 20m
+            memory: 256Mi
+          limits:
+            memory: 768Mi
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: home
+          mountPath: /home/shed
+        - name: config
+          mountPath: /etc/sentinel
+          readOnly: true
+        - name: domains
+          mountPath: /app/ui/domains.json
+          subPath: domains.json
+          readOnly: true
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: home
+        emptyDir: {}
+      - name: config
+        configMap:
+          name: {{ .Values.sentinel.configMap }}
+      - name: domains
+        configMap:
+          name: shed-domains

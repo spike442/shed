@@ -2,36 +2,77 @@ name: Publish
 
 on:
   workflow_dispatch:
-    inputs:
-      bump:
-        description: Version part to increment after this release for the project and every released package
-        type: choice
-        options: [patch, minor, major]
-        default: patch
 
 permissions:
   contents: write
   packages: write
   id-token: write
+  security-events: write
 
 concurrency:
-  group: sentinel-publish-${{ github.ref }}
+  group: shed-publish
   cancel-in-progress: false
 
 jobs:
-  sentinel:
+  plan:
+    name: Version changed modules
+    if: github.ref_name == 'main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      core: ${{ steps.core.outputs.changed == 'true' && steps.core.outputs.version || '' }}
+      shed: ${{ steps.shed.outputs.changed == 'true' && steps.shed.outputs.version || '' }}
+      sentinel: ${{ steps.sentinel.outputs.changed == 'true' && steps.sentinel.outputs.version || '' }}
+      stonks: ${{ steps.stonks.outputs.changed == 'true' && steps.stonks.outputs.version || '' }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+      - id: core
+        uses: paulhatch/semantic-version@9f72830310d5ed81233b641ee59253644cd8a8fc # v6.0.2
+        with:
+          tag_prefix: core-
+          version_format: ${major}.${minor}.${patch}
+          change_path: shed/core shed/pyproject.toml
+      - id: shed
+        uses: paulhatch/semantic-version@9f72830310d5ed81233b641ee59253644cd8a8fc # v6.0.2
+        with:
+          tag_prefix: shed-
+          version_format: ${major}.${minor}.${patch}
+          change_path: shed/shed infra/shed shed/core shed/sentinel/core :(exclude)shed/sentinel/core/pyproject.toml shed/pyproject.toml
+      - id: sentinel
+        uses: paulhatch/semantic-version@9f72830310d5ed81233b641ee59253644cd8a8fc # v6.0.2
+        with:
+          tag_prefix: sentinel-
+          version_format: ${major}.${minor}.${patch}
+          change_path: shed/sentinel infra/sentinel shed/core shed/pyproject.toml
+      - id: stonks
+        uses: paulhatch/semantic-version@9f72830310d5ed81233b641ee59253644cd8a8fc # v6.0.2
+        with:
+          tag_prefix: stonks-
+          version_format: ${major}.${minor}.${patch}
+          change_path: shed/stonks infra/stonks shed/core shed/sentinel/agents :(exclude)shed/sentinel/agents/pyproject.toml shed/pyproject.toml
+
+  shed:
     name: Publish
-    uses: ./.github/workflows/sentinel.yml
+    needs: plan
+    if: needs.plan.outputs.shed != '' || needs.plan.outputs.sentinel != '' || needs.plan.outputs.stonks != ''
+    uses: ./.github/workflows/shed.yml
     with:
       publish: true
+      shed-version: ${{ needs.plan.outputs.shed }}
+      sentinel-version: ${{ needs.plan.outputs.sentinel }}
+      stonks-version: ${{ needs.plan.outputs.stonks }}
     permissions:
       contents: read
       packages: write
       id-token: write
+      security-events: write
 
   release:
-    name: Tag and bump version
-    needs: sentinel
+    name: Tag releases and notify Homelab
+    needs: [plan, shed]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -41,32 +82,42 @@ jobs:
         with:
           version: "0.12.20"
           python-version: "3.12"
-      - name: Tag released commit
-        run: git push --force origin "HEAD:refs/tags/sentinel-$(uv version --short --directory sentinel)"
-      - name: Check out latest branch tip
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-        with:
-          ref: ${{ github.ref_name }}
-      - id: bump
-        name: Bump project and package versions
+      - name: Record released versions
         env:
-          BUMP: ${{ inputs.bump }}
+          RELEASES: core=${{ needs.plan.outputs.core }} shed=${{ needs.plan.outputs.shed }} sentinel=${{ needs.plan.outputs.sentinel }} stonks=${{ needs.plan.outputs.stonks }}
         run: |
-          uv version --bump "$BUMP" --frozen --directory sentinel
-          version="$(uv version --short --directory sentinel)"
-          for member in $(yq -p toml -o yaml '.tool.uv.workspace.members[]' sentinel/pyproject.toml); do
-            uv version "$version" --frozen --directory "sentinel/$member"
+          for release in $RELEASES; do
+            module="${release%%=*}"
+            version="${release#*=}"
+            [[ -n "$version" ]] || continue
+            if [[ "$module" == core ]]; then
+              uv version "$version" --frozen --directory shed/core
+              uv version "$version" --frozen --directory shed
+              continue
+            fi
+            for project in shed/"$module"/*/pyproject.toml; do
+              uv version "$version" --frozen --directory "$(dirname "$project")"
+            done
+            sed -i -e "s/^version: .*/version: $version/" -e "s/^appVersion: .*/appVersion: $version/" "infra/$module/chart/Chart.yaml"
           done
-          uv lock --directory sentinel
-          for chart in sentinel stonks; do
-            VERSION="$version" yq -i '.version = strenv(VERSION) | .appVersion = strenv(VERSION)' "infra/chart/$chart/Chart.yaml"
-          done
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-      - name: Commit next version
+          uv lock --directory shed
+      - id: commit
+        name: Commit released versions
         uses: stefanzweifel/git-auto-commit-action@4a55954c782fc1ea30b9056cd3e7a2b40ca8887d # v7.2.0
         with:
-          commit_message: "chore(release): prepare sentinel ${{ steps.bump.outputs.version }}"
+          commit_message: "chore(release): ${{ needs.plan.outputs.core && format('core {0} ', needs.plan.outputs.core) || '' }}${{ needs.plan.outputs.shed && format('shed {0} ', needs.plan.outputs.shed) || '' }}${{ needs.plan.outputs.sentinel && format('sentinel {0} ', needs.plan.outputs.sentinel) || '' }}${{ needs.plan.outputs.stonks && format('stonks {0}', needs.plan.outputs.stonks) || '' }}"
           branch: ${{ github.ref_name }}
+      - name: Tag released modules
+        env:
+          COMMIT: ${{ steps.commit.outputs.commit_hash || github.sha }}
+          RELEASES: core-${{ needs.plan.outputs.core }} shed-${{ needs.plan.outputs.shed }} sentinel-${{ needs.plan.outputs.sentinel }} stonks-${{ needs.plan.outputs.stonks }}
+        run: |
+          for tag in $RELEASES; do
+            if [[ "$tag" != *- ]]; then
+              git tag "$tag" "$COMMIT"
+              git push origin "refs/tags/$tag"
+            fi
+          done
       - id: homelab-token
         name: Create Homelab token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
@@ -78,4 +129,4 @@ jobs:
       - name: Notify Homelab Renovate
         env:
           GH_TOKEN: ${{ steps.homelab-token.outputs.token }}
-        run: gh api "repos/${{ github.repository_owner }}/homelab/dispatches" --field event_type=sentinel-release
+        run: gh api "repos/${{ github.repository_owner }}/homelab/dispatches" --field event_type=shed-release

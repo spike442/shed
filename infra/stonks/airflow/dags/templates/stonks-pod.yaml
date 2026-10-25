@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: stonks-step
+  labels:
+    app.kubernetes.io/part-of: stonks
+spec:
+  serviceAccountName: stonks
+  automountServiceAccountToken: false
+  restartPolicy: Never
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65532
+    runAsGroup: 65532
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+  - name: base
+    image: stonks
+    imagePullPolicy: IfNotPresent
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop: [ALL]
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        memory: 1Gi
+    volumeMounts:
+    - name: config
+      mountPath: /etc/stonks
+      readOnly: true
+    - name: tmp
+      mountPath: /tmp
+  volumes:
+  - name: config
+    configMap:
+      name: stonks-config
+  - name: tmp
+    emptyDir: {}

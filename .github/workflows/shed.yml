@@ -1,0 +1,262 @@
+name: Shed
+
+on:
+  workflow_call:
+    inputs:
+      publish:
+        type: boolean
+        default: false
+      shed-version:
+        type: string
+        default: ""
+      sentinel-version:
+        type: string
+        default: ""
+      stonks-version:
+        type: string
+        default: ""
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  AIRFLOW_VERSION: "3.2.2"
+
+jobs:
+  changes:
+    name: Changed images
+    runs-on: ubuntu-24.04
+    outputs:
+      images: ${{ steps.images.outputs.images }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - id: filter
+        if: github.event_name == 'pull_request'
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        with:
+          filters: |
+            shared: &shared
+              - shed/pyproject.toml
+              - shed/uv.lock
+              - shed/core/**
+              - .github/workflows/shed.yml
+            shed:
+              - *shared
+              - shed/shed/**
+              - shed/sentinel/core/**
+              - infra/shed/**
+            sentinel:
+              - *shared
+              - shed/sentinel/**
+              - infra/sentinel/**
+            stonks:
+              - *shared
+              - shed/stonks/**
+              - shed/sentinel/agents/**
+              - infra/stonks/**
+      - id: images
+        name: Select images
+        env:
+          INPUTS: ${{ toJSON(inputs) }}
+          CHANGED: ${{ steps.filter.outputs.changes || '[]' }}
+        run: |
+          images="$(find shed -mindepth 2 -maxdepth 3 -name Dockerfile | sort | jq -R -s -c \
+            --argjson inputs "$INPUTS" --argjson changed "$CHANGED" --arg event "${{ github.event_name }}" '
+            split("\n") | map(select(length > 0) | split("/") | .[0:-1] | {image: (.[1:] | join("-")), module: .[1], path: join("/")})
+            | map(.version = ($inputs["\(.module)-version"] // ""))
+            | if $inputs.publish then map(select(.version != ""))
+              elif $event == "pull_request" then map(select(.module as $module | $changed | index($module)) | .version = "ci")
+              else map(.version = "ci") end')"
+          echo "images=$images" >> "$GITHUB_OUTPUT"
+          jq -r '"Building: " + (map("\(.image):\(.version)") | join(", ") | if . == "" then "none" else . end)' <<< "$images"
+
+  python:
+    name: Python checks
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: ./.github/actions/setup-shed
+      - name: Format
+        uses: astral-sh/ruff-action@278981a28ce3188b1e39527901f38254bf3aac89 # v4.1.0
+        with:
+          version-file: shed/uv.lock
+          src: shed infra/stonks/airflow
+          args: format --check
+      - name: Lint
+        uses: astral-sh/ruff-action@278981a28ce3188b1e39527901f38254bf3aac89 # v4.1.0
+        with:
+          version-file: shed/uv.lock
+          src: shed infra/stonks/airflow
+      - name: Startup tests
+        working-directory: shed
+        run: pytest -q
+
+  ui:
+    name: UI build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: shed/shed/ui/package-lock.json
+      - name: Build
+        working-directory: shed/shed/ui
+        run: |
+          npm ci
+          npm run build
+
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: shed/shed/ui/package-lock.json
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+        with:
+          version: "0.12.20"
+          python-version: "3.12"
+      - name: Python
+        working-directory: shed
+        run: |
+          uv export --frozen --no-dev --all-packages --no-emit-workspace --format requirements-txt -o "$RUNNER_TEMP/requirements.txt"
+          uvx pip-audit==2.10.1 --strict --require-hashes -r "$RUNNER_TEMP/requirements.txt"
+      - name: UI
+        if: ${{ !cancelled() }}
+        working-directory: shed/shed/ui
+        run: |
+          npm ci
+          npm audit --audit-level=high
+
+  dags:
+    name: DAG import
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+        with:
+          version: "0.12.20"
+          python-version: "3.12"
+      - name: Install Airflow
+        run: |
+          uv venv "$RUNNER_TEMP/airflow"
+          uv pip install --python "$RUNNER_TEMP/airflow" "apache-airflow==$AIRFLOW_VERSION" apache-airflow-providers-cncf-kubernetes \
+            --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-$AIRFLOW_VERSION/constraints-3.12.txt"
+      - name: Import DAGs
+        env:
+          AIRFLOW_HOME: ${{ runner.temp }}/airflow-home
+          AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+          PYTHONPATH: infra/stonks/airflow/dags
+        run: |
+          "$RUNNER_TEMP/airflow/bin/python" - <<'PY'
+          from airflow.dag_processing.dagbag import DagBag
+
+          bag = DagBag("infra/stonks/airflow/dags", include_examples=False)
+          assert not bag.import_errors, bag.import_errors
+          assert sorted(bag.dags) == ["stonks_daily", "stonks_dividends"], sorted(bag.dags)
+          PY
+
+  chart:
+    name: Chart checks
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v4.3.1
+      - uses: helm/chart-testing-action@720270857a28afd41e2426521a7801db09e9b510 # v2.9.0
+      - name: Lint chart with each CI values file
+        run: ct lint --charts infra/shed/chart,infra/sentinel/chart,infra/stonks/chart --validate-maintainers=false --check-version-increment=false --helm-lint-extra-args=--strict
+
+  images:
+    name: Image (${{ matrix.image }})
+    needs: [changes, python, ui, dags, chart]
+    if: needs.changes.outputs.images != '[]'
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.changes.outputs.images) }}
+    env:
+      IMAGE: ghcr.io/spike442/shed/${{ matrix.image }}:${{ matrix.version }}
+      SCAN: ${{ github.event_name != 'pull_request' }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
+      - if: inputs.publish
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - id: build
+        name: Build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+        env:
+          DOCKER_BUILD_SUMMARY: false
+        with:
+          context: .
+          file: ${{ matrix.path }}/Dockerfile
+          build-args: VERSION=${{ inputs.publish && matrix.version || '' }}
+          push: ${{ inputs.publish }}
+          load: ${{ !inputs.publish && github.event_name != 'pull_request' }}
+          tags: ${{ env.IMAGE }}
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          sbom: ${{ inputs.publish }}
+          provenance: ${{ inputs.publish && 'mode=max' || 'false' }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+      - if: inputs.publish
+        uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3.9.1
+      - if: inputs.publish
+        name: Sign
+        run: cosign sign --yes "${IMAGE%:*}@${{ steps.build.outputs.digest }}"
+      - if: env.SCAN == 'true'
+        name: Scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        env:
+          TRIVY_USERNAME: ${{ inputs.publish && github.actor || '' }}
+          TRIVY_PASSWORD: ${{ inputs.publish && github.token || '' }}
+        with:
+          image-ref: ${{ inputs.publish && format('{0}@{1}', env.IMAGE, steps.build.outputs.digest) || env.IMAGE }}
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          format: sarif
+          output: trivy-${{ matrix.image }}.sarif
+      - if: env.SCAN == 'true'
+        name: Report
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        with:
+          sarif_file: trivy-${{ matrix.image }}.sarif
+          category: image-${{ matrix.image }}
+
+  publish-chart:
+    if: inputs.publish
+    name: Publish chart
+    needs: images
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v4.3.1
+      - name: Package and push
+        env:
+          GHCR_TOKEN: ${{ github.token }}
+          INPUTS: ${{ toJSON(inputs) }}
+        run: |
+          printf '%s' "$GHCR_TOKEN" | helm registry login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          for chart in shed sentinel stonks; do
+            version="$(jq -r --arg chart "$chart" '.[$chart + "-version"]' <<< "$INPUTS")"
+            [[ -n "$version" ]] || continue
+            helm package "infra/$chart/chart" --version "$version" --app-version "$version" --destination "$RUNNER_TEMP"
+            helm push "$RUNNER_TEMP/$chart-$version.tgz" oci://ghcr.io/spike442/charts/shed
+          done

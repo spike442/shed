@@ -1,0 +1,50 @@
+import type { ComponentType } from "react";
+import { Boxes, GitPullRequest } from "lucide-react";
+
+const HEPTAGON = "12,2 19.82,5.77 21.75,14.23 16.34,21.01 7.66,21.01 2.25,14.23 4.18,5.77";
+const SPOKES = [
+  [12, 9.4, 12, 4.8],
+  [14.03, 10.38, 17.63, 7.51],
+  [14.53, 12.58, 19.02, 13.6],
+  [13.13, 14.34, 15.12, 18.49],
+  [10.87, 14.34, 8.88, 18.49],
+  [9.47, 12.58, 4.98, 13.6],
+  [9.97, 10.38, 6.37, 7.51],
+];
+
+function KubernetesIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polygon points={HEPTAGON} />
+      <circle cx="12" cy="12" r="5" />
+      <circle cx="12" cy="12" r="1.4" />
+      {SPOKES.map(([x1, y1, x2, y2]) => (
+        <line key={`${x2}-${y2}`} x1={x1} y1={y1} x2={x2} y2={y2} />
+      ))}
+    </svg>
+  );
+}
+
+function TerminalIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="2" y="3" width="20" height="14" rx="2" />
+      <path d="M8 21h8M12 17v4" />
+      <path d="M7 7v8M17 6v6M12 8v6" />
+      <rect x="6" y="9" width="2" height="3" />
+      <rect x="11" y="10" width="2" height="2.5" />
+      <rect x="16" y="7.5" width="2" height="3" />
+    </svg>
+  );
+}
+
+const ICONS: Record<string, ComponentType<{ "aria-hidden"?: boolean }>> = {
+  kubernetes: KubernetesIcon,
+  "git-pull-request": GitPullRequest,
+  terminal: TerminalIcon,
+};
+
+export function DomainIcon({ icon }: { icon: string | undefined }) {
+  const Icon = (icon && ICONS[icon]) || Boxes;
+  return <Icon aria-hidden={true} />;
+}

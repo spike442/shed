@@ -1,6 +1,0 @@
-{
-  "domains": [
-    { "id": "sre", "api": "/api/sre", "icon": "kubernetes" },
-    { "id": "stonks", "api": "/api/stonks", "icon": "bull" }
-  ]
-}

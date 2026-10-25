@@ -1,0 +1,20 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    app.kubernetes.io/name: shed
+{{ include "shed.standardLabels" . | indent 4 }}
+  name: shed-rules
+  namespace: {{ .Release.Namespace }}
+spec:
+  groups:
+  - name: shed.rules
+    rules:
+    - alert: SentinelStateUnavailable
+      expr: max(sentinel_state_up{namespace="{{ .Release.Namespace }}"}) < 1 or absent(sentinel_state_up{namespace="{{ .Release.Namespace }}"})
+      for: 10m
+      labels:
+        severity: critical
+      annotations:
+        summary: Shed cannot read Sentinel's PostgreSQL state
+        description: The Shed API has not reported readable incident and review state for 10 minutes.

@@ -1,0 +1,28 @@
+[project]
+name = "sentinel-knowledge"
+version = "1.1.0"
+requires-python = ">=3.12"
+dependencies = [
+  "shed-core",
+  "sentinel-core",
+  "boto3>=1.35,<2",
+  "clickhouse-connect>=0.8,<1",
+  "fastapi>=0.115,<1",
+  "fastembed==0.9.1",
+  "langchain-text-splitters>=1.0,<2",
+  "tokenizers>=0.21,<1",
+  "uvicorn[standard]>=0.34,<1",
+]
+
+[tool.uv.sources]
+shed-core = { workspace = true }
+sentinel-core = { workspace = true }
+
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+namespaces = true
+include = ["sentinel.knowledge*"]

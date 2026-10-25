@@ -9,3 +9,4 @@ all:
       hosts:
         s3:
         stonks-s3:
+        stonks-logs:
