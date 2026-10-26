@@ -29,7 +29,15 @@
       "type": "array", "minItems": 1,
       "items": {
         "type": "object", "additionalProperties": false, "required": ["id", "api"],
-        "properties": {"id": {"$ref": "#/definitions/name"}, "api": {"type": "string", "pattern": "^/"}, "icon": {"$ref": "#/definitions/name"}}
+        "properties": {
+          "id": {"$ref": "#/definitions/name"},
+          "api": {"type": "string", "pattern": "^/"},
+          "icon": {"$ref": "#/definitions/name"},
+          "backend": {
+            "type": "object", "additionalProperties": false, "required": ["service", "port"],
+            "properties": {"service": {"$ref": "#/definitions/name"}, "port": {"type": "integer", "minimum": 1}}
+          }
+        }
       }
     },
     "networkPolicy": {

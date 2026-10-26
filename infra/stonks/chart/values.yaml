@@ -17,8 +17,3 @@ image:
   tag: ""
 
 secret: stonks-secrets
-
-route:
-  hostname: shed.example.test
-  gatewayName: gateway
-  gatewayNamespace: network

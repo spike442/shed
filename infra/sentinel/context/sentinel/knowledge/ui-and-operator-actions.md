@@ -7,8 +7,8 @@ Repository: `shed`. Scope: management UI, refresh, and interpreting displayed re
 The `shed` Deployment serves the built React/TypeScript UI from the API process (`shed.api.server` mounts it from `/app/ui` after the `/api` routes, with hashed `/assets/` cached as immutable, everything else revalidated, unknown non-API paths falling back to `index.html`, and API 404s left as JSON). The UI knows no domain in advance: it
 reads `/domains.json` (rendered from the shed chart's `domains`, mounted over the built default, and served
 uncached), a list of domains each with its tile icon (kept while its backend is unreachable) and the base path of its own
-backend on the same hostname: `/api/sre` (`shed`) and `/api/stonks` (`stonks-api`, routed by the Stonks
-chart). Adding a domain
+backend on the same hostname: `/api/sre` (`shed`) and `/api/stonks` (`stonks-api`, routed by the shed
+chart's HTTPRoute from the domain's `backend`). Adding a domain
 is one entry there and a backend serving the console contract (`AGENTS.md`). Separate incident and review workflows
 in sentinel-workflow consume Kafka, sentinel-executor performs their side effects, and agent Deployments process
 commands; none of them serve UI traffic.

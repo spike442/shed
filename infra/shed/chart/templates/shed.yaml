@@ -78,6 +78,12 @@ spec:
   hostnames: [{{ .Values.route.hostname | quote }}]
   parentRefs: [{name: {{ .Values.route.gatewayName }}, namespace: {{ .Values.route.gatewayNamespace }}}]
   rules:
+  {{- range .Values.domains }}
+  {{- if .backend }}
+  - matches: [{path: {type: PathPrefix, value: {{ .api }}}}]
+    backendRefs: [{name: {{ .backend.service }}, port: {{ .backend.port }}}]
+  {{- end }}
+  {{- end }}
   - matches: [{path: {type: PathPrefix, value: /}}]
     backendRefs: [{name: shed, port: 8070}]
 {{- if .Values.networkPolicy.enabled }}

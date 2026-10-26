@@ -34,6 +34,7 @@ domains:
 - id: stonks
   api: /api/stonks
   icon: candlestick
+  backend: {service: stonks-api, port: 8090}
 
 networkPolicy:
   enabled: true

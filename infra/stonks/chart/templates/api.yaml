@@ -53,13 +53,3 @@ kind: Service
 spec:
   selector: {app.kubernetes.io/name: stonks-api}
   ports: [{name: http, port: 8090, targetPort: http}]
----
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-{{ include "stonks.metadata" (dict "root" . "name" "stonks-api") }}
-spec:
-  hostnames: [{{ .Values.route.hostname | quote }}]
-  parentRefs: [{name: {{ .Values.route.gatewayName }}, namespace: {{ .Values.route.gatewayNamespace }}}]
-  rules:
-  - matches: [{path: {type: PathPrefix, value: /api/stonks}}]
-    backendRefs: [{name: stonks-api, port: 8090}]
