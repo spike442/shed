@@ -2620,7 +2620,7 @@ wheels = [
 
 [[package]]
 name = "stonks-api"
-version = "0.1.2"
+version = "0.1.3"
 source = { editable = "stonks/api" }
 dependencies = [
     { name = "fastapi" },
@@ -2643,7 +2643,7 @@ requires-dist = [
 
 [[package]]
 name = "stonks-core"
-version = "0.1.2"
+version = "0.1.3"
 source = { editable = "stonks/core" }
 dependencies = [
     { name = "boto3" },
@@ -2662,7 +2662,7 @@ requires-dist = [
 
 [[package]]
 name = "stonks-dividends"
-version = "0.1.2"
+version = "0.1.3"
 source = { editable = "stonks/dividends" }
 dependencies = [
     { name = "exchange-calendars" },
@@ -2695,7 +2695,7 @@ requires-dist = [
 
 [[package]]
 name = "stonks-ingest"
-version = "0.1.2"
+version = "0.1.3"
 source = { editable = "stonks/ingest" }
 dependencies = [
     { name = "httpx" },
@@ -2716,7 +2716,7 @@ requires-dist = [
 
 [[package]]
 name = "stonks-spark"
-version = "0.1.2"
+version = "0.1.3"
 source = { editable = "stonks/spark" }
 dependencies = [
     { name = "pyyaml" },
