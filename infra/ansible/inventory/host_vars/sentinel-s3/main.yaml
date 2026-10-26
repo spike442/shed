@@ -1,8 +1,5 @@
 ---
-endpoint: https://s3.timcasa.me
-region: us-east-1
 bucket: sentinel
-exclude: README.md
 uploads:
   - {source: "{{ repository_root }}/infra/sentinel/context/dotfiles", prefix: context/dotfiles}
   - {source: "{{ repository_root }}/infra/sentinel/context/homelab", prefix: context/homelab}

@@ -1,8 +1,5 @@
 ---
-endpoint: https://s3.timcasa.me
-region: us-east-1
 bucket: stonks
-exclude: README.md
 uploads:
   - {source: "{{ repository_root }}/infra/stonks/context/stonks", prefix: context/stonks}
   - {source: "{{ repository_root }}/infra/stonks/reference", prefix: reference}

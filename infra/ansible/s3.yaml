@@ -1,0 +1,27 @@
+---
+- name: Require a module with S3 hosts
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Require the module to have S3 hosts
+      ansible.builtin.assert:
+        that:
+          - module is defined
+          - module in groups
+          - groups['s3'] | intersect(groups[module]) | length > 0
+        fail_msg: "Pass -e module=<module>, one of: {{ groups['s3'] | map('regex_replace', '-.*$', '') | unique | join(', ') }}."
+        quiet: true
+
+- name: Upload the module's S3 content
+  hosts: "s3:&{{ module | default('none') }}"
+  gather_facts: false
+  tasks:
+    - name: Install the S3 client
+      ansible.builtin.include_role:
+        name: s3
+        tasks_from: install-client
+
+    - name: Create the bucket and upload its directories
+      ansible.builtin.include_role:
+        name: s3
+        tasks_from: upload-context

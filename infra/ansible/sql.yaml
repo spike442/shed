@@ -1,0 +1,27 @@
+---
+- name: Require a module with SQL hosts
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Require the module to have SQL hosts
+      ansible.builtin.assert:
+        that:
+          - module is defined
+          - module in groups
+          - groups['sql'] | intersect(groups[module]) | length > 0
+        fail_msg: "Pass -e module=<module>, one of: {{ groups['sql'] | map('regex_replace', '-.*$', '') | unique | join(', ') }}."
+        quiet: true
+
+- name: Deploy the module's SQL of the highest version
+  hosts: "sql:&{{ module | default('none') }}"
+  gather_facts: false
+  any_errors_fatal: true
+  tasks:
+    - name: Install the datastore client
+      ansible.builtin.include_role:
+        name: sql
+        tasks_from: install-client
+
+    - name: Deploy the engine SQL
+      ansible.builtin.include_role:
+        name: sql

@@ -26,7 +26,7 @@ and `kafka.topicRetentionMs`), annotated to survive an uninstall.
 Fix commits are created through the GitHub API with GitHub App installation tokens, so GitHub signs them
 as the App and there is no SSH deploy or signing key. The platform shares one S3
 credential, `S3_ACCESS_KEY_ID`/`S3_SECRET_ACCESS_KEY` from the `sentinel` item, for knowledge,
-SRE and PR Review prompts, and `task artifacts`. The knowledge service owns its ClickHouse
+SRE and PR Review prompts, and `task s3 MODULE=sentinel`. The knowledge service owns its ClickHouse
 credential and reads Sentinel's bucket with a copy of Sentinel's S3 credential in its own `knowledge-secrets`. SRE and PR
 Review own their model and Kafka credentials.
 Every component in `agents` has its own 1Password item and Secret: `sentinel` (`sentinel-secrets`), `knowledge`

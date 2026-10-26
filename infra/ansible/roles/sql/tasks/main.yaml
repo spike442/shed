@@ -24,26 +24,27 @@
 
 - name: Require SQL for the version and a host for every engine folder
   vars:
-    unserved: "{{ sql_folders.files | map(attribute='path') | map('basename') | difference(groups['sql']) }}"
+    served: "{{ groups['sql'] | intersect(groups[module]) | map('extract', hostvars, 'sql_engine') | list }}"
+    unserved: "{{ sql_folders.files | map(attribute='path') | map('basename') | difference(served) }}"
   ansible.builtin.assert:
     that:
       - sql_folders.matched > 0
       - unserved | length == 0
     fail_msg: >-
-      {{ sql_root }} must exist and hold only engine folders that a host in group sql deploys
-      ({{ groups['sql'] | join(', ') }}){{ '; unserved: ' ~ (unserved | join(', ')) if unserved else '' }}.
+      {{ sql_root }} must exist and hold only engine folders that a {{ module }} host in group sql deploys
+      ({{ served | join(', ') }}){{ '; unserved: ' ~ (unserved | join(', ')) if unserved else '' }}.
     quiet: true
 
 - name: Find the SQL files
   ansible.builtin.find:
-    paths: "{{ sql_root }}/{{ inventory_hostname }}"
+    paths: "{{ sql_root }}/{{ sql_engine }}"
     patterns: ["*.sql", "*.sql.j2"]
     recurse: true
   register: sql_files
 
 - name: Run the SQL files with the engine client
   ansible.builtin.include_tasks:
-    file: "{{ inventory_hostname }}.yaml"
+    file: "{{ sql_engine }}.yaml"
     apply:
       tags: [always]
   vars:

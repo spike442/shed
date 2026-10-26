@@ -35,13 +35,13 @@ source row is absent on its next successful indexing run.
 ## Initialization and recovery
 
 SQL lives under `infra/sentinel/sql/<version>/<engine>/<domain>/`. Installs always start from scratch from the highest version folder; there are no migrations, and a release in development edits its own folder in place. Initialize a fresh installation by hand
-with `task artifacts` (selecting the module and then the component with `gum`, or setting `MODULE=sentinel COMPONENT=<clickhouse|postgresql|s3>`)
-using the Ansible playbook `infra/ansible/deploy.yaml` after Flux created the PostgreSQL database and roles and the ClickHouse
-server, and after `task artifacts MODULE=knowledge COMPONENT=clickhouse` created the knowledge database, before deploying Sentinel. Each service is an inventory host (`postgresql`, `clickhouse`, `s3`)
-with its client settings in `infra/ansible/inventory/host_vars/<host>/main.yaml` and its 1Password lookups
-in `secrets.yaml`. The SQL module is one `sql` role: it selects
+with `task sql MODULE=sentinel` (the Ansible playbook `infra/ansible/sql.yaml`) after Flux created the PostgreSQL database and
+roles and the ClickHouse server, and after `task sql MODULE=knowledge` created the knowledge database, before deploying Sentinel;
+`task s3 MODULE=sentinel` uploads its prompts and knowledge. Sentinel's inventory hosts are `sentinel-postgresql`,
+`sentinel-clickhouse`, and `sentinel-s3`, with the engine settings in `infra/ansible/inventory/group_vars/<engine>/`, their own
+in `host_vars/<host>/main.yaml`, and 1Password lookups in `secrets.yaml`. The SQL module is one `sql` role: it selects
 the highest version folder under `infra/<module>/sql/`, finds the files of the host's engine folder there in path order, and hands them to
-`roles/sql/tasks/<host>.yaml`, which runs them in one session of the engine's own client. `psql`
+`roles/sql/tasks/<engine>.yaml`, which runs them in one session of the engine's own client. `psql`
 connects as `sentinel`; `clickhouse client` connects to the native port as `admin`. Sentinel's ClickHouse SQL
 (`clickhouse/30-knowledge/`) creates only its own knowledge tables, `knowledge.sentinel_documents` and
 `knowledge.sentinel_chunks`, in the `knowledge` database the knowledge module creates. Both stop at the first error. A

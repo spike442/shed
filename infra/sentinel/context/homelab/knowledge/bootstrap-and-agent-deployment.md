@@ -51,7 +51,7 @@ for the database and messaging operators.
 ## Rollout proof
 
 Before rollout, verify required CRDs/operators and SecretStore health, then run
-`task artifacts` for the knowledge database (`MODULE=knowledge COMPONENT=clickhouse`) and then Sentinel's components once the
+`task sql MODULE=knowledge` for the knowledge database, then `task sql MODULE=sentinel` and `task s3 MODULE=sentinel` once the
 PostgreSQL database and roles and the ClickHouse server exist. Verify
 the Sentinel chart's Kafka request, command, and return topics, Homelab's Kafka users/ACLs, prompt objects/checksum,
 the knowledge image with its pinned model, and image tags.

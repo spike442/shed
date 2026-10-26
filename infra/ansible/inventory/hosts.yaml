@@ -2,11 +2,28 @@
 all:
   children:
     sql:
-      hosts:
+      children:
         postgresql:
+          hosts:
+            sentinel-postgresql:
         clickhouse:
-    storage:
+          hosts:
+            knowledge-clickhouse:
+            sentinel-clickhouse:
+    s3:
       hosts:
-        s3:
+        sentinel-s3:
+        stonks-s3:
+        stonks-logs:
+    knowledge:
+      hosts:
+        knowledge-clickhouse:
+    sentinel:
+      hosts:
+        sentinel-postgresql:
+        sentinel-clickhouse:
+        sentinel-s3:
+    stonks:
+      hosts:
         stonks-s3:
         stonks-logs:
