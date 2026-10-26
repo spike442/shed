@@ -17,6 +17,7 @@ RUN apt-get update && apt-get upgrade -y --no-install-recommends && rm -rf /var/
 ARG MAVEN_URL=https://repo1.maven.org/maven2
 ADD --chmod=644 --checksum=sha256:66bd9eefb938b1a1657487324b63c13df2d8b17164a1dd24e0ef37b905bc5baa ${MAVEN_URL}/org/apache/hadoop/hadoop-aws/3.5.0/hadoop-aws-3.5.0.jar /opt/spark/jars/
 ADD --chmod=644 --checksum=sha256:db4b55f24ad1b4e70f17eb1717a4de76a8dadc5a27d764be7c44ff67b2c1c677 ${MAVEN_URL}/software/amazon/awssdk/bundle/2.35.4/bundle-2.35.4.jar /opt/spark/jars/
+ADD --chmod=644 --checksum=sha256:4959a9747cbb479c73c3ffbcd479bee5b014f8b2880994585a8693fb9d24675e ${MAVEN_URL}/software/amazon/s3/analyticsaccelerator/analyticsaccelerator-s3/1.3.1/analyticsaccelerator-s3-1.3.1.jar /opt/spark/jars/
 COPY --from=build /tmp/spark-requirements.txt /tmp/spark-requirements.txt
 COPY --from=build /tmp/wheels/stonks_spark-*.whl /tmp/
 RUN python3 -m pip install --no-cache-dir --require-hashes -r /tmp/spark-requirements.txt \

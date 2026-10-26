@@ -8,7 +8,7 @@ kind: ServiceAccount
 {{ include "stonks.metadata" (dict "root" . "name" "stonks-spark") }}
 ---
 {{ include "stonks.role" (dict "root" . "name" "stonks-spark-runtime" "component" "stonks-spark" "account" "stonks-spark" "rules" (list
-  (dict "apiGroups" (list "") "resources" (list "pods" "services" "configmaps" "persistentvolumeclaims") "verbs" (list "get" "list" "watch" "create" "delete" "patch")))) }}
+  (dict "apiGroups" (list "") "resources" (list "pods" "services" "configmaps" "persistentvolumeclaims") "verbs" (list "get" "list" "watch" "create" "delete" "deletecollection" "patch")))) }}
 ---
 {{ include "stonks.role" (dict "root" . "name" "stonks-airflow" "account" .Values.airflow.serviceAccount "accountNamespace" .Values.airflow.namespace "rules" (list
   (dict "apiGroups" (list "") "resources" (list "pods") "verbs" (list "get" "list" "watch" "create" "delete" "patch"))
