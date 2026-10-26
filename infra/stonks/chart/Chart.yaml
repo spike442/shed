@@ -1,8 +1,8 @@
 apiVersion: v2
-appVersion: 0.1.1
+appVersion: 0.1.2
 description: Stonks data platform configuration, its read-only API, and the access its Airflow and Spark workloads need
 name: stonks
 type: application
-version: 0.1.1
+version: 0.1.2
 sources:
   - https://github.com/spike442/shed
