@@ -22,8 +22,9 @@ reviews the PR's current revision as a new attempt, with the operator's optional
 ## Worker assessment
 
 PR Review clones an isolated temporary workspace, fetches exact base/head revisions, and checks
-out the PR head detached. It gathers a bounded diff and currently runs `git diff --check` as
-the built-in deterministic check. That check detects whitespace problems; it does not compile
+out the PR head detached. It diffs from the merge base of the base and head, as GitHub shows a PR, so commits
+the base branch gained after the PR branched never appear as the PR's changes; it gathers that bounded diff and
+currently runs `git diff --check` on it as the built-in deterministic check. That check detects whitespace problems; it does not compile
 the application, run its test suite, or validate all Kubernetes/chart semantics.
 
 Mandatory S3 instructions consist of the repository's system prompt, its review or fix action, and one
@@ -67,7 +68,7 @@ the reviewed head, its checks, the diff, the earlier attempts with their finding
 operator's instruction. With the repository's `actions/fix.md` prompt and a `read_file` tool limited to the
 checkout (refusing `.git`, paths outside it, files over `max_file_bytes`, and files with credential material),
 it returns each changed file's complete content (or its deletion), a summary, and a commit subject. The worker applies the
-changes to the checkout and runs the checks again on the fixed revision against the base.
+changes to the checkout and runs the checks again on the fixed revision against the same merge base.
 
 The workflow's pure fix policy (`reviews/fix_policy.py`) declines a fix with no changes, a path outside the
 repository, credential material, or a fixed revision that still fails a check; the review returns to

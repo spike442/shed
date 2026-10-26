@@ -46,10 +46,16 @@ class WorkspaceManager:
             self._run_command(["git", "checkout", "--detach", pull_request.head_sha], workspace, audit, deadline)
             yield workspace
 
+    def merge_base(self, checkout: Path, pull_request: PullRequest, audit: AuditLog, deadline: datetime) -> str:
+        command = ["git", "merge-base", pull_request.base_sha, pull_request.head_sha]
+        result = self._run_command(command, checkout, audit, deadline)
+        return result.stdout.strip()
+
     def run_checks(
         self, checkout: Path, pull_request: PullRequest, audit: AuditLog, deadline: datetime
     ) -> list[CheckResult]:
-        command = ["git", "diff", "--check", pull_request.base_sha, pull_request.head_sha]
+        base = self.merge_base(checkout, pull_request, audit, deadline)
+        command = ["git", "diff", "--check", base, pull_request.head_sha]
         result = self._run_command(command, checkout, audit, deadline, check=False)
         return [CheckResult(name="git diff --check", passed=result.returncode == 0, output=result.stdout)]
 
@@ -76,15 +82,17 @@ class WorkspaceManager:
             target.write_text(change.content, encoding="utf-8")
         paths = [change.file_path for change in changes]
         self._run_command(["git", "add", "--", *paths], checkout, audit, deadline)
-        command = ["git", "diff", "--cached", "--check", pull_request.base_sha]
+        base = self.merge_base(checkout, pull_request, audit, deadline)
+        command = ["git", "diff", "--cached", "--check", base]
         result = self._run_command(command, checkout, audit, deadline, check=False)
         return [CheckResult(name="git diff --check", passed=result.returncode == 0, output=result.stdout)]
 
     def read_diff(
         self, checkout: Path, pull_request: PullRequest, audit: AuditLog, deadline: datetime, max_bytes: int
     ) -> str:
+        base = self.merge_base(checkout, pull_request, audit, deadline)
         result = self._run_command(
-            ["git", "diff", "--no-ext-diff", "--unified=80", pull_request.base_sha, pull_request.head_sha],
+            ["git", "diff", "--no-ext-diff", "--unified=80", base, pull_request.head_sha],
             checkout,
             audit,
             deadline,
