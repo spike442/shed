@@ -2321,7 +2321,7 @@ wheels = [
 
 [[package]]
 name = "sentinel-agents"
-version = "0.1.1"
+version = "0.1.2"
 source = { editable = "sentinel/agents" }
 dependencies = [
     { name = "httpx" },
@@ -2348,7 +2348,7 @@ requires-dist = [
 
 [[package]]
 name = "sentinel-core"
-version = "0.1.1"
+version = "0.1.2"
 source = { editable = "sentinel/core" }
 dependencies = [
     { name = "knowledge-client" },
@@ -2394,7 +2394,7 @@ provides-extras = ["database", "kafka", "github", "metrics", "s3"]
 
 [[package]]
 name = "sentinel-executor"
-version = "0.1.1"
+version = "0.1.2"
 source = { editable = "sentinel/executor" }
 dependencies = [
     { name = "httpx" },
@@ -2411,7 +2411,7 @@ requires-dist = [
 
 [[package]]
 name = "sentinel-sre"
-version = "0.1.1"
+version = "0.1.2"
 source = { editable = "sentinel/sre" }
 dependencies = [
     { name = "knowledge-client" },
@@ -2432,7 +2432,7 @@ requires-dist = [
 
 [[package]]
 name = "sentinel-workflow"
-version = "0.1.1"
+version = "0.1.2"
 source = { editable = "sentinel/workflow" }
 dependencies = [
     { name = "knowledge-client" },
