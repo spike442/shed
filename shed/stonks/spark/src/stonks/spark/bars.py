@@ -14,6 +14,7 @@ BAR_COLUMNS = (
     "exchange",
     "fetched_at",
 )
+HISTORY_COLUMNS = ("isin", "bar_date", *SERIES_FIELDS)
 PRICE_COLUMNS = (
     "isin",
     "symbol",
@@ -96,6 +97,10 @@ def latest_prices(bars: DataFrame) -> DataFrame:
     ranked = bars.withColumn("bar_rank", F.row_number().over(newest_first))
     latest = ranked.where(F.col("bar_rank") == 1)
     return latest.select(*PRICE_COLUMNS)
+
+
+def price_history(bars: DataFrame) -> DataFrame:
+    return bars.select(*HISTORY_COLUMNS)
 
 
 def bars_summary(bars: DataFrame) -> dict:

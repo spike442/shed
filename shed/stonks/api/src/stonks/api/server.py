@@ -5,7 +5,7 @@ from datetime import date
 from importlib.metadata import version
 from typing import Any
 
-from fastapi import APIRouter, FastAPI, HTTPException, Query, Request
+from fastapi import APIRouter, FastAPI, HTTPException, Path, Query, Request
 from stonks.api.datasets import DATASETS, columns
 from stonks.api.settings import Settings
 from stonks.api.store import StonksReader
@@ -15,6 +15,7 @@ from stonks.core.objects import ObjectStore, s3_client
 logger = logging.getLogger(__name__)
 
 API_PREFIX = "/api/stonks"
+ISIN = r"^[A-Z]{2}[A-Z0-9]{9}[0-9]$"
 
 
 @asynccontextmanager
@@ -34,6 +35,13 @@ async def application_lifespan(application: FastAPI) -> AsyncIterator[None]:
 
 def reader_of(request: Request) -> StonksReader:
     return request.app.state.reader
+
+
+def latest_trade_date(reader: StonksReader) -> date:
+    available = reader.trade_dates()
+    if not available:
+        raise HTTPException(status_code=404, detail="no trade date has a universe yet")
+    return available[0]
 
 
 def create_app() -> FastAPI:
@@ -85,10 +93,7 @@ def create_app() -> FastAPI:
             raise HTTPException(status_code=404, detail=f"unknown dataset: {name}")
         reader = reader_of(request)
         if found.trade_dated and trade_date is None:
-            available = reader.trade_dates()
-            if not available:
-                raise HTTPException(status_code=404, detail="no trade date has a universe yet")
-            trade_date = available[0]
+            trade_date = latest_trade_date(reader)
         document = reader.document(found, trade_date if found.trade_dated else None)
         if document is None:
             raise HTTPException(status_code=404, detail=f"{found.label} is not available")
@@ -101,6 +106,20 @@ def create_app() -> FastAPI:
             "columns": names,
             "rows": rows,
         }
+
+    @router.get("/history/{isin}")
+    def history(
+        request: Request,
+        isin: str = Path(pattern=ISIN),
+        trade_date: date | None = Query(default=None),
+    ) -> dict[str, Any]:
+        reader = reader_of(request)
+        if trade_date is None:
+            trade_date = latest_trade_date(reader)
+        bars = reader.price_history(isin, trade_date)
+        if bars is None:
+            raise HTTPException(status_code=404, detail=f"no price history for {isin} on {trade_date}")
+        return {"isin": isin, "trade_date": trade_date, "bars": bars}
 
     application.include_router(router)
     return application

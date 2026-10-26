@@ -7,6 +7,7 @@ from stonks.api.datasets import Area, Dataset
 from stonks.core.objects import ObjectStore
 from stonks.core.settings import StorageConfig
 
+HISTORY = "history"
 TRADE_DATE = re.compile(r"trade_date=(\d{4}-\d{2}-\d{2})/universe\.json$")
 
 
@@ -23,8 +24,7 @@ class StonksReader:
         days = [date.fromisoformat(day) for day in found]
         return sorted(days, reverse=True)
 
-    def curated_table(self, table: str, trade_date: date) -> dict | None:
-        prefix = f"{self.curated_prefix}/{table}/trade_date={trade_date.isoformat()}/"
+    def parquet_rows(self, prefix: str) -> list[dict] | None:
         keys = self.objects.keys(prefix)
         files = [key for key in keys if key.endswith(".parquet")]
         if not files:
@@ -35,7 +35,21 @@ class StonksReader:
             buffer = io.BytesIO(content)
             loaded = parquet.read_table(buffer)
             rows.extend(loaded.to_pylist())
+        return rows
+
+    def curated_table(self, table: str, trade_date: date) -> dict | None:
+        prefix = f"{self.curated_prefix}/{table}/trade_date={trade_date.isoformat()}/"
+        rows = self.parquet_rows(prefix)
+        if rows is None:
+            return None
         return {"rows": rows}
+
+    def price_history(self, isin: str, trade_date: date) -> list[dict] | None:
+        prefix = f"{self.curated_prefix}/{HISTORY}/trade_date={trade_date.isoformat()}/isin={isin}/"
+        rows = self.parquet_rows(prefix)
+        if rows is None:
+            return None
+        return sorted(rows, key=lambda row: row["bar_date"])
 
     def document(self, dataset: Dataset, trade_date: date | None) -> dict | None:
         if dataset.area is Area.CURATED:

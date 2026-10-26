@@ -94,7 +94,9 @@ export function App() {
           manifest={manifest}
           client={current.client}
           selected={view}
+          selectedId={selectedId}
           onSelect={(dataset) => navigate({ domain: current.config.id, view: dataset, recordId: null }, true)}
+          onSelectRecord={(dataset, recordId) => navigate({ domain: current.config.id, view: dataset, recordId }, true)}
         />
       )}
       {!current && <p className="empty">No domains are available.</p>}

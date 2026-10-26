@@ -291,12 +291,33 @@ body::after {
 .data-grid th button { width: 100%; padding: 8px 10px; border: 0; color: var(--accent); background: none; font: 11px var(--mono); letter-spacing: .14em; text-align: left; text-transform: uppercase; white-space: nowrap; }
 .data-grid td { max-width: 320px; padding: 7px 10px; overflow: hidden; border-top: 1px solid rgba(230,230,230,.08); color: var(--text); text-overflow: ellipsis; white-space: nowrap; }
 .data-grid tbody tr:hover td { background: rgba(230,230,230,.06); }
+.price-explorer { display: grid; grid-template-columns: minmax(220px, 320px) minmax(0, 1fr); gap: 16px; min-width: 0; }
+.stock-list { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.stock-rows { max-height: 600px; margin: 0; padding: 0; overflow: auto; list-style: none; }
+.stock-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; width: 100%; padding: 8px 10px; border: 0; border-top: 1px solid rgba(230,230,230,.08); background: none; text-align: left; transition: background .15s ease; }
+.stock-row.selected { background: rgba(230,230,230,.12); box-shadow: var(--float-low); }
+.stock-name { overflow: hidden; color: var(--text-bright); font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.stock-close { color: var(--text); font: 13px var(--mono); text-align: right; }
+.stock-symbol, .stock-currency { color: var(--text-faint); font: 11px var(--mono); letter-spacing: .08em; }
+.stock-currency { text-align: right; }
+.stock-row.selected .stock-symbol { color: var(--accent); }
+.price-panel { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.price-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 10px; }
+.price-header h4 { margin: 0; color: var(--text-bright); font-size: 20px; letter-spacing: .04em; }
+.price-header small { color: var(--text-dim); font: 11px var(--mono); letter-spacing: .08em; }
+.price-quote { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; }
+.price-quote strong { color: var(--text-bright); font: 20px var(--mono); }
+.price-up { color: var(--green); font: 13px var(--mono); }
+.price-down { color: var(--red); font: 13px var(--mono); }
+.price-ranges { margin-right: 0; }
+.price-chart { width: 100%; height: 480px; min-width: 0; }
 
 @media (hover: hover) {
   .agent-tile:not(:disabled):hover { transform: translateY(-2px); }
   .agent-tile:not(:disabled):hover .tile-icon { color: var(--text); }
   .node:hover .node-frame { stroke: var(--accent); fill: rgba(30,30,30,.9); }
   .record-row:hover { background: rgba(230,230,230,.05); }
+  .stock-row:hover { background: rgba(230,230,230,.05); }
   .action-button:hover { color: var(--void); background: var(--accent); box-shadow: var(--glow); }
   .action-button.danger:hover { color: var(--void); background: var(--red); }
   .action-button.primary:hover { color: var(--void); background: var(--cyan); }
@@ -335,6 +356,9 @@ body::after {
   .attempt > summary .attempt-status, .attempt > summary time { grid-column: 3; }
   .detail-header { flex-wrap: wrap; }
   .detail-chips { justify-content: flex-start; }
+  .price-explorer { grid-template-columns: 1fr; }
+  .stock-rows { max-height: 260px; }
+  .price-chart { height: 340px; }
 }
 
 @media (max-width: 480px) {

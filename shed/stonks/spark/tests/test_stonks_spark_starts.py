@@ -28,8 +28,10 @@ def test_spark_job_writes_prices_and_stops_its_session(monkeypatch, tmp_path) ->
     bars.yahoo_bars = MagicMock()
     bars.bars_summary = MagicMock(return_value={"rows": 1, "instruments": 1, "first_date": None, "last_date": None})
     bars.latest_prices = MagicMock()
+    bars.price_history = MagicMock()
     writers = ModuleType("stonks.spark.writers")
     writers.write_prices = MagicMock()
+    writers.write_history = MagicMock()
     monkeypatch.setitem(sys.modules, "pyspark", ModuleType("pyspark"))
     monkeypatch.setitem(sys.modules, "pyspark.sql", pyspark_sql)
     monkeypatch.setitem(sys.modules, "stonks.spark.readers", readers)
@@ -46,5 +48,8 @@ def test_spark_job_writes_prices_and_stops_its_session(monkeypatch, tmp_path) ->
     bars.bars_summary.assert_called_once()
     writers.write_prices.assert_called_once_with(
         bars.latest_prices.return_value, "s3a://stonks/curated/prices/trade_date=2026-10-21"
+    )
+    writers.write_history.assert_called_once_with(
+        bars.price_history.return_value, "s3a://stonks/curated/history/trade_date=2026-10-21"
     )
     spark.stop.assert_called_once()

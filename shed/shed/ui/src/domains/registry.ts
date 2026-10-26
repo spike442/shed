@@ -1,5 +1,5 @@
 import { lazy } from "react";
-import type { DomainModule } from "./types";
+import type { DatasetView, DomainModule } from "./types";
 
 export const WORKFLOW_MODULES: Record<string, DomainModule> = {
   "sre/incidents": {
@@ -14,4 +14,12 @@ export const WORKFLOW_MODULES: Record<string, DomainModule> = {
 
 export function workflowModule(domain: string, workflow: string): DomainModule {
   return WORKFLOW_MODULES[`${domain}/${workflow}`] ?? {};
+}
+
+export const DATASET_VIEWS: Record<string, DatasetView> = {
+  "stonks/prices": lazy(() => import("./stonks/prices/PriceExplorer")),
+};
+
+export function datasetView(domain: string, dataset: string): DatasetView | undefined {
+  return DATASET_VIEWS[`${domain}/${dataset}`];
 }

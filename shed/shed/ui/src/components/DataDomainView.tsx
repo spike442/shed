@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import type { DomainClient } from "../api/client";
+import { datasetView } from "../domains/registry";
 import { useResource } from "../hooks/useResource";
 import type { DatasetRows, DatasetSummary, DomainManifest } from "../model";
 import { DataGrid } from "./DataGrid";
@@ -12,12 +13,16 @@ export function DataDomainView({
   manifest,
   client,
   selected,
+  selectedId,
   onSelect,
+  onSelectRecord,
 }: {
   manifest: DomainManifest;
   client: DomainClient;
   selected: string | null;
+  selectedId: string | null;
   onSelect: (dataset: string) => void;
+  onSelectRecord: (dataset: string, recordId: string | null) => void;
 }) {
   const [refreshToken, setRefreshToken] = useState(0);
   const [tradeDate, setTradeDate] = useState("");
@@ -36,6 +41,7 @@ export function DataDomainView({
   const current = datasets.value.find((dataset) => dataset.name === selected) ?? datasets.value[0] ?? null;
   const currentName = current?.name;
   const tradeDated = current?.trade_dated ?? false;
+  const View = currentName ? datasetView(manifest.id, currentName) : undefined;
 
   useEffect(() => {
     if (!currentName) return;
@@ -96,7 +102,18 @@ export function DataDomainView({
             {data.label}
             {data.trade_date ? ` · ${data.trade_date}` : ""}
           </h3>
-          <DataGrid columns={data.columns} rows={data.rows} />
+          {View ? (
+            <Suspense fallback={<p className="empty">Loading the dataset view…</p>}>
+              <View
+                client={client}
+                data={data}
+                selectedId={selectedId}
+                onSelect={(recordId) => onSelectRecord(data.name, recordId)}
+              />
+            </Suspense>
+          ) : (
+            <DataGrid columns={data.columns} rows={data.rows} />
+          )}
         </section>
       )}
     </section>
