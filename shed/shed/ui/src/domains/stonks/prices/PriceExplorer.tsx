@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { RequestError } from "../../../api/client";
 import type { DatasetRows } from "../../../model";
 import type { DatasetViewProps } from "../../types";
 import { PriceChart, type Bar } from "./PriceChart";
@@ -14,6 +15,8 @@ type Stock = {
 };
 
 type History = { isin: string; trade_date: string; bars: Bar[] };
+
+const NO_HISTORY = "No price history for this trade date yet. It appears after the next Spark run.";
 
 const RANGES: { label: string; months: number | null }[] = [
   { label: "1M", months: 1 },
@@ -88,6 +91,7 @@ export default function PriceExplorer({ client, data, selectedId, onSelect }: Da
     const controller = new AbortController();
     const query = tradeDate ? `?trade_date=${tradeDate}` : "";
     setHistory(null);
+    setError("");
     client
       .getJson<History>(`/history/${encodeURIComponent(activeIsin)}${query}`, controller.signal)
       .then((loaded) => {
@@ -96,7 +100,8 @@ export default function PriceExplorer({ client, data, selectedId, onSelect }: Da
       })
       .catch((reason: unknown) => {
         if (controller.signal.aborted) return;
-        setError(reason instanceof Error ? reason.message : "Price history unavailable.");
+        if (reason instanceof RequestError && reason.status === 404) setError(NO_HISTORY);
+        else setError(reason instanceof Error ? reason.message : "Price history unavailable.");
       });
     return () => controller.abort();
   }, [client, activeIsin, tradeDate]);
@@ -172,7 +177,8 @@ export default function PriceExplorer({ client, data, selectedId, onSelect }: Da
                 </button>
               ))}
             </nav>
-            {error && <p role="alert" className="error">{error}</p>}
+            {error === NO_HISTORY && <p className="empty">{error}</p>}
+            {error && error !== NO_HISTORY && <p role="alert" className="error">{error}</p>}
             {!error && !history && <p className="empty">Loading price history…</p>}
             <PriceChart bars={bars} months={months} />
           </>

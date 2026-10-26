@@ -12,9 +12,15 @@ async function failureDetail(response: Response): Promise<string> {
   }
 }
 
+export class RequestError extends Error {
+  constructor(readonly status: number) {
+    super(`Request failed (${status})`);
+  }
+}
+
 export async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
   const response = await fetch(url, { cache: "no-store", signal });
-  if (!response.ok) throw new Error(`Request failed (${response.status})`);
+  if (!response.ok) throw new RequestError(response.status);
   return response.json() as Promise<T>;
 }
 
