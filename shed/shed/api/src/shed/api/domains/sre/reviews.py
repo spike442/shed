@@ -10,19 +10,15 @@ from shed.api.domains.contract import ActionPrompt, ActionRequest, RecordAction,
 from shed.api.domains.workflow import RecordWorkflow
 from shed.api.requests import PrReviewWorkflowRequests
 
-FIX_PROMPT = (
-    "Fix it: the reviewer fixes what blocked this PR and pushes a commit to its branch. Optionally tell it what to fix."
-)
+MERGE_CONFIRM = "Merge this pull request now, regardless of the review's verdict?"
 REPLAY_PROMPT = "Replay this review. Optionally tell the reviewer what to reconsider."
 
 TONES = {
     PrReviewStatus.ACKNOWLEDGED.value: Tone.ACTIVE,
     PrReviewStatus.RUNNING.value: Tone.ACTIVE,
-    PrReviewStatus.FIXING.value: Tone.ACTIVE,
     PrReviewStatus.BLOCKED.value: Tone.WAITING,
     PrReviewStatus.FAILED.value: Tone.FAILED,
     PrReviewStatus.MERGED.value: Tone.DONE,
-    rules.FIX_PUSHED: Tone.DONE,
     history.SUPERSEDED: Tone.CLOSED,
 }
 
@@ -42,9 +38,8 @@ class ReviewWorkflow(RecordWorkflow):
     def actions(self, record: dict[str, Any]) -> list[RecordAction]:
         status = record["status"]
         actions = []
-        if status in rules.FIXABLE:
-            prompt = ActionPrompt(message=FIX_PROMPT)
-            actions.append(RecordAction(name="fix", label="Fix it", tone="primary", prompt=prompt))
+        if status in rules.MERGEABLE:
+            actions.append(RecordAction(name="merge", label="Merge", tone="primary", confirm=MERGE_CONFIRM))
         if status in rules.REPLAYABLE:
             actions.append(RecordAction(name="replay", label="Replay", prompt=ActionPrompt(message=REPLAY_PROMPT)))
         confirm = "Delete this review record?"
@@ -61,8 +56,8 @@ class ReviewWorkflow(RecordWorkflow):
         review_id = record["id"]
         requests = PrReviewWorkflowRequests(request.app.state.settings, self.reader(request))
         prompt = body.prompt.strip()
-        if name == "fix":
-            return await requests.fix_review(review_id, prompt)
+        if name == "merge":
+            return await requests.merge_review(review_id)
         if name == "replay":
             return await requests.replay_review(review_id, prompt)
         return await requests.delete_review(review_id)

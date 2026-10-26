@@ -6,12 +6,10 @@ from pathlib import Path
 from pydantic import BaseModel
 from sentinel.core.contracts.executor import (
     CreatePullRequest,
-    FixPushed,
     MergeOutcome,
     MergePullRequest,
     MergeStatus,
     PullRequestCreated,
-    PushFix,
     RunCommand,
 )
 from sentinel.core.contracts.incidents import ActionOutput
@@ -77,15 +75,6 @@ class Executor:
         )
         return MergeOutcome(status=MergeStatus.MERGED, sha=sha)
 
-    def push_fix(self, request: PushFix) -> FixPushed:
-        started_at = datetime.now(UTC)
-        deadline = deadline_after(started_at, self.config.action_timeout_seconds)
-        sha = self.git.push_fix(
-            request.repository, request.branch, request.head_sha, request.changes, request.message, deadline=deadline
-        )
-        logger.info("Fix pushed repository=%s branch=%s sha=%s", request.repository.name, request.branch, sha)
-        return FixPushed(sha=sha)
-
     def run_command(self, request: RunCommand) -> ActionOutput:
         return commands.run_command(request, self.config.commands, WORKSPACE / "commands")
 
@@ -93,6 +82,5 @@ class Executor:
 HANDLERS: dict[ExecutorAction, tuple[type[BaseModel], Callable[[Executor, BaseModel], BaseModel]]] = {
     ExecutorAction.CREATE_PULL_REQUEST: (CreatePullRequest, Executor.create_pull_request),
     ExecutorAction.MERGE_PULL_REQUEST: (MergePullRequest, Executor.merge_pull_request),
-    ExecutorAction.PUSH_FIX: (PushFix, Executor.push_fix),
     ExecutorAction.RUN_COMMAND: (RunCommand, Executor.run_command),
 }

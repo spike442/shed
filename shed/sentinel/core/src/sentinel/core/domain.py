@@ -65,13 +65,12 @@ class AlertStatus(StrEnum):
 class PrReviewStatus(StrEnum):
     """Where a review's workflow is; ``blocked`` is a reviewed revision the policy does not merge.
 
-    ``fixing`` is an operator-approved fix of a blocked review being written and pushed to the pull request.
+    An operator's merge of a blocked review runs as ``running`` until GitHub merges it.
     """
 
     ACKNOWLEDGED = "acknowledged"
     RUNNING = "running"
     BLOCKED = "blocked"
-    FIXING = "fixing"
     FAILED = "failed"
     MERGED = "merged"
 
@@ -79,7 +78,7 @@ class PrReviewStatus(StrEnum):
 class ReviewTrigger(StrEnum):
     REVIEW = "review"
     REPLAY = "replay"
-    FIX = "fix"
+    MERGE = "merge"
 
 
 class RepositoryIdentity(BaseModel):

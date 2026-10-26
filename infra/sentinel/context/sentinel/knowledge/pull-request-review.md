@@ -16,7 +16,7 @@ or manually triggered scan can pick up an acknowledged one. When the PR is an SR
 recorded its URL), acknowledging it attaches the review to that incident once (`incident_id` on the review,
 `review_id` on the incident), and every final review status is reported to the incident's timeline; reviews of
 any other PR stand alone. A new base or head is always reviewed again,
-never approved by an earlier attempt. UI Replay accepts blocked, failed, running, and fixing reviews and
+never approved by an earlier attempt. UI Replay accepts blocked, failed, and running reviews and
 reviews the PR's current revision as a new attempt, with the operator's optional instruction.
 
 ## Worker assessment
@@ -27,8 +27,8 @@ the base branch gained after the PR branched never appear as the PR's changes; i
 currently runs `git diff --check` on it as the built-in deterministic check. That check detects whitespace problems; it does not compile
 the application, run its test suite, or validate all Kubernetes/chart semantics.
 
-Mandatory S3 instructions consist of the repository's system prompt, its review or fix action, and one
-`actions/<tool>.md` per tool (`search_knowledge.md`, and `read_file.md` for a fix), in that order. A review's only tool is `search_knowledge` (a fix adds `read_file`); the review agent runs in the SRE process (the
+Mandatory S3 instructions consist of the repository's system prompt, its review action, and one
+`actions/<tool>.md` per tool (`search_knowledge.md`), in that order. A review's only tool is `search_knowledge`; the review agent runs in the SRE process (the
 `sentinel-sre` service account and its read-only `sentinel-sre` ClusterRole, kubeconfig, and egress), but the reviewer has no
 cluster tool, so it judges a change from the repository. The model receives
 the diff, PR metadata, retrieved knowledge, the last five finished attempts on the PR, and for a replay the
@@ -52,36 +52,28 @@ longer clean fails the review with the reason, and an operator retries it from t
 while sentinel-executor merges exactly the reviewed head SHA after confirming the PR is still clean; a PR
 that is no longer clean fails the review, a GitHub refusal fails the review with the error type,
 and a review the policy does not merge is `blocked`. Statuses are `acknowledged`, `running`, `blocked`,
-`fixing`, `failed`, and `merged`.
+`failed`, and `merged`.
 The worker returns a decision but never merges. Sentinel persists it, rechecks current GitHub state,
 and requests a merge pinned to the reviewed head SHA. A successful merge updates merge time and
 commit; merge errors remain visible as failed. Repeating a completion checks for an already
 merged reviewed revision rather than blindly merging again.
 
-## Fix it
+## Merge
 
-An operator can ask the reviewer to fix a `blocked` review from the UI (`POST /api/sre/reviews/records/{id}/actions/fix`
-with an optional prompt). The workflow first reads the PR from GitHub and declines, keeping the review
-blocked with the reason, when it is merged (recorded instead), closed, changed since its review, or from a
-fork Sentinel cannot push to. Otherwise the review becomes `fixing` and PR Review receives a `fix` command:
-the reviewed head, its checks, the diff, the earlier attempts with their findings and failed checks, and the
-operator's instruction. With the repository's `actions/fix.md` prompt and a `read_file` tool limited to the
-checkout (refusing `.git`, paths outside it, files over `max_file_bytes`, and files with credential material),
-it returns each changed file's complete content (or its deletion), a summary, and a commit subject. The worker applies the
-changes to the checkout and runs the checks again on the fixed revision against the same merge base.
-
-The workflow's pure fix policy (`reviews/fix_policy.py`) declines a fix with no changes, a path outside the
-repository, credential material, or a fixed revision that still fails a check; the review returns to
-`blocked` with the reason, and the attempt keeps what was proposed. An accepted fix is saved on its attempt
-and sent to sentinel-executor as `push-fix`: one commit that GitHub creates, authors, and signs as the
-GitHub App on exactly the reviewed head, fast-forwarding the PR's own branch without force. The review becomes `acknowledged` at the pushed head, and the
-next discovery reviews it once GitHub reports it clean, applying the same merge policy as any revision. A
-failed agent run or push fails the review. Pushing to a Renovate branch makes Renovate stop rebasing it.
+An operator can merge a `blocked` review from the UI (`POST /api/sre/reviews/records/{id}/actions/merge`, after a
+confirmation), overriding the reviewer's verdict: its risk, confidence, and findings no longer hold the merge. The
+workflow first reads the PR from GitHub and declines, keeping the review blocked with a `merge_declined` timeline
+reason, when it is closed or its head changed since the review (Check now reviews the new head); a PR already
+merged is recorded instead. A base that moved is not a reason to decline. Otherwise the review becomes `running`
+as a new `merge` attempt, and sentinel-executor merges exactly the reviewed head with the configured merge method,
+the same `merge-pull-request` action an approved review uses: GitHub still refuses a PR that is not clean and
+mergeable (conflicts, failing required checks, branch protection), which fails the review with the reason. There is
+no agent-written fix of a blocked review; Replay reviews the PR again, and a fix belongs in the PR's own branch.
 
 Sources: `shed/sentinel/workflow/src/sentinel/workflow/sre/reviews/`, `infra/sentinel/chart/config/common/repositories.yaml`,
 `shed/sentinel/sre/src/sentinel/sre/reviews/run.py`,
 `shed/sentinel/sre/src/sentinel/sre/reviews/policy.py`,
 `shed/sentinel/sre/src/sentinel/sre/reviews/workspace.py`,
-`shed/sentinel/agents/src/sentinel/agents/sre/review/agent.py`, `shed/sentinel/executor/src/sentinel/executor/git_workspace.py`,
+`shed/sentinel/agents/src/sentinel/agents/sre/review/agent.py`, `shed/sentinel/executor/src/sentinel/executor/actions.py`,
 `shed/sentinel/executor/src/sentinel/executor/github.py`,
 `infra/sentinel/chart/config/pr-review.yaml`, `infra/sentinel/context/<context>/prompts/pr-review/actions/`.

@@ -4,8 +4,6 @@ from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
-from sentinel.agents.sre.review.checkout import checkout_path
-from sentinel.core.contracts.changes import ProposedChange
 from sentinel.core.contracts.reviews import CheckResult, PullRequest, RepositoryConfig
 from shed.core.audit import AuditLog
 from shed.core.deadline import RunTimedOut, remaining_seconds
@@ -56,34 +54,6 @@ class WorkspaceManager:
     ) -> list[CheckResult]:
         base = self.merge_base(checkout, pull_request, audit, deadline)
         command = ["git", "diff", "--check", base, pull_request.head_sha]
-        result = self._run_command(command, checkout, audit, deadline, check=False)
-        return [CheckResult(name="git diff --check", passed=result.returncode == 0, output=result.stdout)]
-
-    def check_fix(
-        self,
-        checkout: Path,
-        pull_request: PullRequest,
-        changes: list[ProposedChange],
-        audit: AuditLog,
-        deadline: datetime,
-    ) -> list[CheckResult]:
-        for change in changes:
-            target = checkout_path(checkout, change.file_path)
-            if target is None:
-                output = f"{change.file_path} is not a file of this repository."
-                return [CheckResult(name="change paths", passed=False, output=output)]
-            if change.delete:
-                if not target.is_file():
-                    output = f"{change.file_path} deletes a file that does not exist."
-                    return [CheckResult(name="change paths", passed=False, output=output)]
-                target.unlink()
-                continue
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(change.content, encoding="utf-8")
-        paths = [change.file_path for change in changes]
-        self._run_command(["git", "add", "--", *paths], checkout, audit, deadline)
-        base = self.merge_base(checkout, pull_request, audit, deadline)
-        command = ["git", "diff", "--cached", "--check", base]
         result = self._run_command(command, checkout, audit, deadline, check=False)
         return [CheckResult(name="git diff --check", passed=result.returncode == 0, output=result.stdout)]
 

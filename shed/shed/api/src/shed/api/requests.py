@@ -108,10 +108,10 @@ class PrReviewWorkflowRequests:
         await self._publish(RequestKind.REPLAY, workflow_id, review["id"], {"prompt": prompt})
         return workflow_id
 
-    async def fix_review(self, review_id: str, prompt: str) -> str:
-        review = await self._configured_review(review_id, review_rules.FIXABLE, "fixed")
-        workflow_id = f"pr-review-fix-{uuid4()}"
-        await self._publish(RequestKind.FIX, workflow_id, review["id"], {"prompt": prompt})
+    async def merge_review(self, review_id: str) -> str:
+        review = await self._configured_review(review_id, review_rules.MERGEABLE, "merged")
+        workflow_id = f"pr-review-merge-{uuid4()}"
+        await self._publish(RequestKind.MERGE, workflow_id, review["id"], {})
         return workflow_id
 
     async def delete_review(self, review_id: str) -> str:

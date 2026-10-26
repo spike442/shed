@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from sentinel.core.contracts.incidents import IncidentResult, PreparedIncident
-from sentinel.core.contracts.reviews import DecidedPrReview, PreparedPrReview, ProposedPrFix
+from sentinel.core.contracts.reviews import DecidedPrReview, PreparedPrReview
 from sentinel.core.kafka.agent_worker import Agent, run_agents
 from sentinel.core.kafka.consumer import exit_on_signals
 from sentinel.core.kafka.contracts import KafkaTopic, RequestKind, RunFailure
@@ -23,9 +23,9 @@ def main() -> None:
             request = PreparedIncident.model_validate(payload)
             return investigation.investigate(request, deadline)
 
-        def review(payload: dict, deadline: datetime) -> DecidedPrReview | ProposedPrFix | RunFailure:
+        def review(payload: dict, deadline: datetime) -> DecidedPrReview | RunFailure:
             request = PreparedPrReview.model_validate(payload)
-            return review_run.run(request, deadline)
+            return review_run.review(request, deadline)
 
         incidents = Agent(
             settings=incident_settings,

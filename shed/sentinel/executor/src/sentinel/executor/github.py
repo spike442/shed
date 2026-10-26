@@ -58,7 +58,3 @@ class GitHubGateway(GitHubReader):
     def create_branch(self, repository: RepositoryIdentity, branch: str, sha: str) -> None:
         path = f"/repos/{repository.owner}/{repository.name}/git/refs"
         self._json("POST", path, json={"ref": f"refs/heads/{branch}", "sha": sha})
-
-    def update_branch(self, repository: RepositoryIdentity, branch: str, sha: str) -> None:
-        path = f"/repos/{repository.owner}/{repository.name}/git/refs/heads/{branch}"
-        self._json("PATCH", path, json={"sha": sha, "force": False})

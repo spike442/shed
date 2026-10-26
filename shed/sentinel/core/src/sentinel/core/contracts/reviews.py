@@ -1,8 +1,7 @@
-from typing import Annotated, Literal
+from typing import Literal
 
 from knowledge.client.contracts import RetrievedContext
 from pydantic import BaseModel, Field
-from sentinel.core.contracts.changes import ProposedChange
 from sentinel.core.contracts.history import PriorAttempt
 from sentinel.core.domain import ConfidenceLevel, RepositoryIdentity, ReviewTrigger, RiskLevel
 from shed.core.audit import AuditAction, ToolBudget
@@ -54,7 +53,7 @@ class PrReviewRequest(BaseModel):
     pull_request: PullRequest
     repository: RepositoryConfig
     trigger: ReviewTrigger = ReviewTrigger.REVIEW
-    prompt: str = Field(default="", description="The operator's instruction for a replay or a fix.")
+    prompt: str = Field(default="", description="The operator's instruction for a replay.")
 
 
 class PreparedPrReview(PrReviewRequest):
@@ -88,26 +87,3 @@ class DecidedPrReview(BaseModel):
     decision: PrReviewDecision
     audit_actions: list[AuditAction] = Field(default_factory=list)
     tool_budget: ToolBudget = Field(default_factory=ToolBudget)
-
-
-class PrFix(BaseModel):
-    """The reviewer's fix of its own blocked review: complete new contents of each changed file, or its deletion."""
-
-    summary: str = Field(description="What the fix changes and which findings it addresses.")
-    commit_message: str = Field(description="A one-line commit subject for the fix.")
-    changes: list[ProposedChange] = Field(
-        default_factory=list,
-        description="Each changed file's complete new content or deletion; empty when it cannot be fixed.",
-    )
-
-
-class ProposedPrFix(BaseModel):
-    status: Literal["fix"] = "fix"
-    pull_request: PullRequest
-    fix: PrFix
-    checks: list[CheckResult]
-    audit_actions: list[AuditAction] = Field(default_factory=list)
-    tool_budget: ToolBudget = Field(default_factory=ToolBudget)
-
-
-PrReviewOutcome = Annotated[DecidedPrReview | ProposedPrFix, Field(discriminator="status")]

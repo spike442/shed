@@ -36,18 +36,6 @@ class MergeOutcome(BaseModel):
     sha: str = ""
 
 
-class PushFix(BaseModel):
-    repository: RepositoryIdentity
-    branch: str
-    head_sha: str
-    changes: list[ProposedChange] = Field(min_length=1)
-    message: str
-
-
-class FixPushed(BaseModel):
-    sha: str
-
-
 class RunCommand(BaseModel):
     command: str
     timeout_seconds: int = Field(gt=0)

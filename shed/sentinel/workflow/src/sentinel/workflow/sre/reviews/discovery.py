@@ -31,7 +31,7 @@ class Discovery:
     def on_request(self, workflow_request: WorkflowRequest) -> None:
         """Acknowledge and schedule each open pull request GitHub reports clean whose current revision needs review.
 
-        That is a new pull request, an acknowledged one (including a pushed fix), or a blocked or failed one whose
+        That is a new pull request, an acknowledged one, or a blocked or failed one whose
         base or head changed. A pull request whose checks still run is skipped; a later poll finds it once clean.
         """
         try:

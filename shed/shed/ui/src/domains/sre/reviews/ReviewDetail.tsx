@@ -1,5 +1,5 @@
 import { ExternalLink } from "lucide-react";
-import { AttemptHistory, Timeline, shortSha } from "../../../components/Attempts";
+import { AttemptHistory, Timeline } from "../../../components/Attempts";
 import { Block, KeyValues, Section, TextList, ToolBudgetPanel, budgetExhausted } from "../../../components/RecordSections";
 import { formatTimestamp } from "../../../format";
 import type { DetailProps } from "../../types";
@@ -23,11 +23,9 @@ function ChecksList({ checks }: { checks: CheckResult[] | undefined }) {
 }
 
 function ReviewAttempt({ result }: { result: ReviewAttemptResult }) {
-  const fix = result.changes !== undefined || result.commit_sha !== undefined;
   return (
     <>
       {result.error && <p className="audit-error">{result.error}</p>}
-      {result.reason && <p className="attempt-reason">Fix declined: {result.reason}</p>}
       {result.decision_reason && (
         <>
           <h4>Decision</h4>
@@ -36,7 +34,7 @@ function ReviewAttempt({ result }: { result: ReviewAttemptResult }) {
       )}
       {result.summary && (
         <>
-          <h4>{fix ? "Fix" : "Summary"}</h4>
+          <h4>Summary</h4>
           <p>{result.summary}</p>
         </>
       )}
@@ -49,22 +47,9 @@ function ReviewAttempt({ result }: { result: ReviewAttemptResult }) {
           <TextList items={result.findings} />
         </>
       )}
-      {result.commit_message && <KeyValues values={{ commit: result.commit_message, pushed: shortSha(result.commit_sha) }} />}
-      {!result.commit_message && result.commit_sha && <KeyValues values={{ pushed: shortSha(result.commit_sha) }} />}
-      {Boolean(result.changes?.length) && (
-        <>
-          <h4>Changed files</h4>
-          {result.changes?.map((change) => (
-            <details className="nested" key={change.file_path}>
-              <summary>{change.delete ? `${change.file_path} (deleted)` : change.file_path}</summary>
-              {!change.delete && <Block value={change.content} />}
-            </details>
-          ))}
-        </>
-      )}
       {Boolean(result.checks?.length) && (
         <>
-          <h4>{fix ? "Checks of the fixed revision" : "Checks"}</h4>
+          <h4>Checks</h4>
           <ChecksList checks={result.checks} />
         </>
       )}

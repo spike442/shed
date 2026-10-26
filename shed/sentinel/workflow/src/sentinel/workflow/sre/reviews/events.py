@@ -42,28 +42,13 @@ class ReplayRejected:
 
 
 @dataclass(frozen=True)
-class FixClaimed:
+class MergeClaimed:
     workflow_id: str
-    prompt: str
 
 
 @dataclass(frozen=True)
-class FixDeclined:
+class MergeDeclined:
     reason: str
-    workflow_id: str = ""
-    proposal: JsonObject | None = None
-
-
-@dataclass(frozen=True)
-class FixProposed:
-    workflow_id: str
-    proposal: JsonObject
-
-
-@dataclass(frozen=True)
-class FixPushed:
-    workflow_id: str
-    sha: str
 
 
 @dataclass(frozen=True)
@@ -78,9 +63,7 @@ Event = (
     | ResultSaved
     | Merged
     | ReplayRejected
-    | FixClaimed
-    | FixDeclined
-    | FixProposed
-    | FixPushed
+    | MergeClaimed
+    | MergeDeclined
     | Deleted
 )

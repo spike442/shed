@@ -2,27 +2,14 @@ import json
 
 from knowledge.client.client import KnowledgeClient
 from knowledge.client.contracts import KnowledgeSearchRequest, RetrievedContext
-from pydantic import TypeAdapter
 from sentinel.core.config.workflow import PrReviewSettings
 from sentinel.core.contracts.history import prior_attempts
-from sentinel.core.contracts.reviews import (
-    DecidedPrReview,
-    PreparedPrReview,
-    PrReviewOutcome,
-    PrReviewRequest,
-    PullRequest,
-)
+from sentinel.core.contracts.reviews import DecidedPrReview, PreparedPrReview, PrReviewRequest, PullRequest
 from sentinel.core.domain import AgentDomain
 from sentinel.core.kafka.contracts import AgentReturn, WorkflowRequest
 from sentinel.workflow.messages import DomainMessages
 from sentinel.workflow.sre.reviews.merge import Merge
 from sentinel.workflow.sre.reviews.repository import PrReviewRepository
-
-review_result = TypeAdapter(PrReviewOutcome)
-
-
-def agent_outcome(agent_return: AgentReturn) -> PrReviewOutcome:
-    return review_result.validate_python(agent_return.result)
 
 
 def search_review_knowledge(
@@ -83,10 +70,7 @@ class PrReviewRun:
         if agent_return.failure is not None:
             self.messages.fail(review_id, workflow_id, agent_return.failure)
             return
-        outcome = agent_outcome(agent_return)
-        if not isinstance(outcome, DecidedPrReview):
-            self.messages.fail(review_id, workflow_id, "UnexpectedAgentResult")
-            return
+        outcome = DecidedPrReview.model_validate(agent_return.result)
         saved = self.reviews.save_review(review_id, outcome, workflow_id)
         if saved and outcome.decision.merge:
             self.merge.start_merge(review_id, outcome.pull_request, workflow_id)

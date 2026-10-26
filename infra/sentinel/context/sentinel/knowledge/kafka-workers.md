@@ -46,10 +46,9 @@ an operator may replay a running incident or review from the UI at any time, and
 reconciliation keeps that from repeating a pull request or merge. A manual action runs within its own timeout.
 Discovery reads open pull requests and their mergeability from GitHub, then schedules each one whose current
 revision needs review. A review replay reads the pull request: a merged one is recorded, a closed one is
-rejected with the reason on the review, and an open one is reviewed again at its current revision. A fix
-sends the PR Review worker a `fix` command; the executor's `push-fix` has GitHub create a signed commit of the accepted
-fix on exactly the reviewed head and fast-forwards the branch to it without force, finds its own commit when a command is repeated, and fails when
-the branch moved.
+rejected with the reason on the review, and an open one is reviewed again at its current revision. An operator's
+Merge of a blocked review reads the pull request the same way, then sends sentinel-executor the same
+`merge-pull-request` an approved review sends.
 
 Kafka delivery repeats only when a process dies mid-message. Workflow IDs fence stale returns; manual
 action records are idempotent by workflow ID and claim time. The executor reconciles GitHub before

@@ -9,7 +9,6 @@ class PrReviewConfig(BaseModel):
     allowed_risk_levels: set[RiskLevel]
     allowed_confidence_levels: set[ConfidenceLevel]
     max_diff_bytes: int = Field(gt=0)
-    max_file_bytes: int = Field(gt=0)
     max_tool_calls: int = Field(gt=0)
     max_command_output_bytes: int = Field(gt=0)
     run_timeout_seconds: int = Field(gt=0)

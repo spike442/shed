@@ -43,7 +43,7 @@ class RequestKind(StrEnum):
     PR_REVIEW = "review"
     DISCOVER = "discover"
     REPLAY = "replay"
-    FIX = "fix"
+    MERGE = "merge"
     MANUAL_ACTION = "manual-action"
     IGNORE = "ignore"
     DELETE = "delete"
@@ -105,7 +105,6 @@ class AgentReturn(RecordMessage):
 class ExecutorAction(StrEnum):
     CREATE_PULL_REQUEST = "create-pull-request"
     MERGE_PULL_REQUEST = "merge-pull-request"
-    PUSH_FIX = "push-fix"
     RUN_COMMAND = "run-command"
 
 

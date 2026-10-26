@@ -1,7 +1,5 @@
 import type { Attempt, DomainRecord, TimelineEvent, ToolBudget } from "../../../model";
 
-export type ProposedChange = { file_path: string; content: string; delete?: boolean };
-
 export type CheckResult = { name: string; passed: boolean; output?: string };
 
 export type ReviewAttemptResult = {
@@ -12,10 +10,6 @@ export type ReviewAttemptResult = {
   findings?: string[];
   merge?: boolean;
   decision_reason?: string;
-  commit_message?: string;
-  changes?: ProposedChange[];
-  commit_sha?: string;
-  reason?: string;
   error?: string;
 };
 

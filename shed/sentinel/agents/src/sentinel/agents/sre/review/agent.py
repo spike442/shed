@@ -1,12 +1,11 @@
 from datetime import datetime
-from pathlib import Path
 from typing import Any
 
 from knowledge.client.client import KnowledgeClient
-from sentinel.agents.sre.knowledge import reference_material
-from sentinel.agents.sre.review.tools import FIX_TOOLS, REVIEW_TOOLS, ToolContext
+from sentinel.agents.sre.knowledge import KnowledgeContext, reference_material
+from sentinel.agents.sre.review.tools import REVIEW_TOOLS
 from sentinel.core.contracts.history import PriorAttempt
-from sentinel.core.contracts.reviews import CheckResult, PreparedPrReview, PrFix, PrReviewResult, PullRequest
+from sentinel.core.contracts.reviews import PreparedPrReview, PrReviewResult, PullRequest
 from sentinel.core.domain import AgentDomain, ReviewTrigger
 from shed.agents.runner import AgentRun, AgentRunner, AgentTask
 from shed.core.audit import AuditLog
@@ -15,50 +14,25 @@ REVIEW = AgentTask(
     agent=AgentDomain.PULL_REQUEST_REVIEW.value,
     action="review",
     tools=REVIEW_TOOLS,
-    context_schema=ToolContext,
+    context_schema=KnowledgeContext,
     answer=PrReviewResult,
-)
-FIX = AgentTask(
-    agent=AgentDomain.PULL_REQUEST_REVIEW.value,
-    action="fix",
-    tools=FIX_TOOLS,
-    context_schema=ToolContext,
-    answer=PrFix,
 )
 
 
 class ReviewAgent:
-    def __init__(self, runner: AgentRunner, knowledge: KnowledgeClient, max_file_bytes: int):
+    def __init__(self, runner: AgentRunner, knowledge: KnowledgeClient):
         self.runner = runner
         self.knowledge = knowledge
-        self.max_file_bytes = max_file_bytes
 
     def generate_review(
         self, request: PreparedPrReview, diff: str, audit: AuditLog, deadline: datetime
     ) -> PrReviewResult:
         message = self.review_prompt(request, diff)
-        run = self._run(REVIEW, request, message, audit=audit, deadline=deadline, checkout=None)
+        run = self._run(REVIEW, request, message, audit=audit, deadline=deadline)
         review = self.runner.run(REVIEW, run)
         submitted = review.model_dump(mode="json")
         audit.record("review_submitted", submitted)
         return review
-
-    def generate_fix(
-        self,
-        request: PreparedPrReview,
-        diff: str,
-        checks: list[CheckResult],
-        *,
-        checkout: Path,
-        audit: AuditLog,
-        deadline: datetime,
-    ) -> PrFix:
-        message = self.fix_prompt(request, diff, checks)
-        run = self._run(FIX, request, message, audit=audit, deadline=deadline, checkout=checkout)
-        fix = self.runner.run(FIX, run)
-        changed = [change.file_path for change in fix.changes]
-        audit.record("fix_proposed", {"summary": fix.summary, "commit_message": fix.commit_message, "files": changed})
-        return fix
 
     def review_prompt(self, request: PreparedPrReview, diff: str) -> str:
         pull_request = request.pull_request
@@ -70,22 +44,6 @@ class ReviewAgent:
             f"Review pull request #{pull_request.number} in "
             f"{pull_request.owner}/{pull_request.repository}.\n\n"
             f"{facts}{earlier}{operator}\n\n"
-            f"Diff:\n{diff}{references}"
-        )
-
-    def fix_prompt(self, request: PreparedPrReview, diff: str, checks: list[CheckResult]) -> str:
-        pull_request = request.pull_request
-        references = reference_material(request.rag_context)
-        facts = pull_request_facts(pull_request)
-        earlier = attempt_history(request.history)
-        instruction = f"\n\nOperator instruction:\n{request.prompt}" if request.prompt else ""
-        check_lines = [check_summary(check) for check in checks]
-        check_text = "\n".join(check_lines)
-        return (
-            f"Fix the blocked pull request #{pull_request.number} in "
-            f"{pull_request.owner}/{pull_request.repository}.\n\n"
-            f"{facts}{earlier}{instruction}\n\n"
-            f"Checks of the head revision:\n{check_text}\n\n"
             f"Diff:\n{diff}{references}"
         )
 
@@ -104,16 +62,10 @@ class ReviewAgent:
         *,
         audit: AuditLog,
         deadline: datetime,
-        checkout: Path | None,
     ) -> AgentRun:
         pull_request = request.pull_request
-        context = ToolContext(
-            audit=audit,
-            deadline=deadline,
-            knowledge=self.knowledge,
-            repository=request.repository.scope,
-            checkout=checkout,
-            max_file_bytes=self.max_file_bytes,
+        context = KnowledgeContext(
+            audit=audit, deadline=deadline, knowledge=self.knowledge, repository=request.repository.scope
         )
         return AgentRun(
             scope=request.repository.scope,
@@ -141,12 +93,6 @@ def pull_request_facts(pull_request: PullRequest) -> str:
     )
 
 
-def check_summary(check: CheckResult) -> str:
-    outcome = "passed" if check.passed else "failed"
-    output = f"\n{check.output}" if check.output else ""
-    return f"- {check.name}: {outcome}{output}"
-
-
 def attempt_history(history: list[PriorAttempt]) -> str:
     if not history:
         return ""
@@ -171,14 +117,6 @@ def attempt_result(result: dict[str, Any]) -> list[str]:
     for check in result.get("checks", []):
         if not check["passed"]:
             lines.append(f"  failed check {check['name']}: {check.get('output', '')}")
-    changed = [change["file_path"] for change in result.get("changes", [])]
-    if changed:
-        files = ", ".join(changed)
-        lines.append(f"  fix changed: {files}")
-    if result.get("commit_sha"):
-        lines.append(f"  fix pushed as {result['commit_sha']}")
-    if result.get("reason"):
-        lines.append(f"  fix declined: {result['reason']}")
     if result.get("error"):
         lines.append(f"  error: {result['error']}")
     return lines

@@ -1,7 +1,7 @@
 from typing import Any
 from uuid import NAMESPACE_URL, uuid5
 
-from sentinel.core.contracts.reviews import DecidedPrReview, ProposedPrFix, PrReviewRequest, PullRequest
+from sentinel.core.contracts.reviews import DecidedPrReview, PrReviewRequest, PullRequest
 from sentinel.core.domain import PrReviewStatus
 from sentinel.core.kafka.contracts import RunFailure
 from sentinel.core.persistence.pr_review_record import PrReviewRecord
@@ -12,11 +12,9 @@ from sentinel.workflow.repository import TransitionRepository, failure_trail
 from sentinel.workflow.sre.reviews.events import (
     Acknowledged,
     Deleted,
-    FixClaimed,
-    FixDeclined,
-    FixProposed,
-    FixPushed,
+    MergeClaimed,
     Merged,
+    MergeDeclined,
     PrReviewClaimed,
     PrReviewFailed,
     ReplayRejected,
@@ -98,29 +96,14 @@ class PrReviewRepository(TransitionRepository, PrReviewReader):
         outcome = self.apply_transition(review_id, event)
         require_existing(outcome, f"review not found: {review_id}")
 
-    def claim_fix(self, review_id: str, workflow_id: str, prompt: str) -> bool:
-        event = FixClaimed(workflow_id, prompt)
+    def claim_merge(self, review_id: str, workflow_id: str) -> bool:
+        event = MergeClaimed(workflow_id)
         outcome = self.apply_transition(review_id, event)
         require_existing(outcome, f"review not found: {review_id}")
         return succeeded(outcome)
 
-    def decline_fix(
-        self, review_id: str, reason: str, workflow_id: str = "", proposal: ProposedPrFix | None = None
-    ) -> None:
-        proposal_json = None if proposal is None else proposal.model_dump(mode="json")
-        event = FixDeclined(reason, workflow_id, proposal_json)
-        outcome = self.apply_transition(review_id, event)
-        require_existing(outcome, f"review not found: {review_id}")
-
-    def save_fix(self, review_id: str, workflow_id: str, proposal: ProposedPrFix) -> bool:
-        proposal_json = proposal.model_dump(mode="json")
-        event = FixProposed(workflow_id, proposal_json)
-        outcome = self.apply_transition(review_id, event)
-        require_existing(outcome, f"review not found: {review_id}")
-        return isinstance(outcome, Accepted)
-
-    def mark_fix_pushed(self, review_id: str, workflow_id: str, sha: str) -> None:
-        event = FixPushed(workflow_id, sha)
+    def decline_merge(self, review_id: str, reason: str) -> None:
+        event = MergeDeclined(reason)
         outcome = self.apply_transition(review_id, event)
         require_existing(outcome, f"review not found: {review_id}")
 

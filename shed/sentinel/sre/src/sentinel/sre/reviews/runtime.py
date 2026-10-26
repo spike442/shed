@@ -23,6 +23,6 @@ def load_review(settings: Settings) -> Iterator[ReviewRun]:
         runner = AgentRunner(settings.agent, settings.openai_api_key, prompts)
         resources.callback(runner.close)
         review = settings.review
-        agent = ReviewAgent(runner, knowledge, review.max_file_bytes)
+        agent = ReviewAgent(runner, knowledge)
         workspace = WorkspaceManager(review.max_command_output_bytes)
         yield ReviewRun(settings, workspace, agent)

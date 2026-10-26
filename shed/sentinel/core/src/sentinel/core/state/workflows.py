@@ -43,16 +43,11 @@ PR_REVIEW_FLOW: Flow = (
     (Review.ACKNOWLEDGED.value, "PrReviewClaimed", Review.RUNNING.value),
     (Review.BLOCKED.value, "PrReviewClaimed", Review.RUNNING.value),
     (Review.FAILED.value, "PrReviewClaimed", Review.RUNNING.value),
-    (Review.FIXING.value, "PrReviewClaimed", Review.RUNNING.value),
     (Review.RUNNING.value, "ResultSaved", Review.BLOCKED.value),
     (Review.RUNNING.value, "PrReviewFailed", Review.FAILED.value),
-    (Review.FIXING.value, "PrReviewFailed", Review.FAILED.value),
     (Review.RUNNING.value, "ReplayRejected", Review.FAILED.value),
     (Review.BLOCKED.value, "ReplayRejected", Review.FAILED.value),
-    (Review.FIXING.value, "ReplayRejected", Review.FAILED.value),
-    (Review.BLOCKED.value, "FixClaimed", Review.FIXING.value),
-    (Review.FIXING.value, "FixDeclined", Review.BLOCKED.value),
-    (Review.FIXING.value, "FixPushed", Review.ACKNOWLEDGED.value),
+    (Review.BLOCKED.value, "MergeClaimed", Review.RUNNING.value),
     ("*", "Merged", Review.MERGED.value),
 )
 

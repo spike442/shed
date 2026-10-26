@@ -2,8 +2,7 @@ import logging
 from datetime import datetime
 
 from sentinel.agents.sre.review.agent import ReviewAgent
-from sentinel.core.contracts.reviews import DecidedPrReview, PreparedPrReview, ProposedPrFix
-from sentinel.core.domain import ReviewTrigger
+from sentinel.core.contracts.reviews import DecidedPrReview, PreparedPrReview
 from sentinel.core.kafka.contracts import RunFailure
 from sentinel.sre.reviews.policy import decide_merge
 from sentinel.sre.reviews.settings import Settings
@@ -33,11 +32,6 @@ class ReviewRun:
         self.settings = settings
         self.workspace = workspace
         self.agent = agent
-
-    def run(self, request: PreparedPrReview, deadline: datetime) -> DecidedPrReview | ProposedPrFix | RunFailure:
-        if request.trigger is ReviewTrigger.FIX:
-            return self.fix(request, deadline)
-        return self.review(request, deadline)
 
     def review(self, request: PreparedPrReview, deadline: datetime) -> DecidedPrReview | RunFailure:
         pull_request, repository = request.pull_request, request.repository
@@ -70,39 +64,6 @@ class ReviewRun:
             checks=checks,
             review=review,
             decision=decision,
-            audit_actions=audit.actions,
-            tool_budget=audit.tool_budget,
-        )
-
-    def fix(self, request: PreparedPrReview, deadline: datetime) -> ProposedPrFix | RunFailure:
-        pull_request, repository = request.pull_request, request.repository
-        audit = AuditLog()
-        try:
-            remaining_seconds(deadline)
-            with self.workspace.checkout_repository(pull_request, repository, audit, deadline) as checkout:
-                checks = self.workspace.run_checks(checkout, pull_request, audit, deadline)
-                max_diff_bytes = self.settings.review.max_diff_bytes
-                diff = self.workspace.read_diff(checkout, pull_request, audit, deadline, max_diff_bytes)
-                fix = self.agent.generate_fix(request, diff, checks, checkout=checkout, audit=audit, deadline=deadline)
-                fixed_checks = []
-                if fix.changes:
-                    fixed_checks = self.workspace.check_fix(checkout, pull_request, fix.changes, audit, deadline)
-        except Exception as error:
-            logger.exception("PR fix failed repository=%s number=%s", repository.name, pull_request.number)
-            failure = type(error).__name__
-            log_tool_budget(audit, repository.name, pull_request.number)
-            return RunFailure(error=failure, audit_actions=audit.actions, tool_budget=audit.tool_budget)
-        log_tool_budget(audit, repository.name, pull_request.number)
-        logger.info(
-            "PR fix completed repository=%s number=%s files=%s",
-            repository.name,
-            pull_request.number,
-            len(fix.changes),
-        )
-        return ProposedPrFix(
-            pull_request=pull_request,
-            fix=fix,
-            checks=fixed_checks,
             audit_actions=audit.actions,
             tool_budget=audit.tool_budget,
         )

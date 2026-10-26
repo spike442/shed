@@ -92,14 +92,11 @@ Ignore and Delete queue requests for the workflow to apply. Ignore changes track
 Delete removes the PostgreSQL row and its stored history after the request is consumed.
 A later alert or discovery of the same PR can create a new record. Deletion does
 not resolve the upstream alert or undo a PR. Review Check now triggers
-discovery (`POST /api/sre/events/check`). Review Replay accepts blocked, failed, running, and fixing reviews: the workflow reads the PR from
+discovery (`POST /api/sre/events/check`). Review Replay accepts blocked, failed, and running reviews: the workflow reads the PR from
 GitHub, records a merge that already happened, explains a closed PR on the review, and otherwise reviews its
-current revision again. Fix it appears only on blocked reviews: the reviewer receives the earlier attempts and
-the optional operator instruction, returns complete new contents of the files it changes (or deletes them), and checks the fixed
-revision; Sentinel pushes one commit to the PR's own branch only when the checks pass and the changes are
-repository-relative and credential-free, and the next discovery reviews the new head as another attempt. Fix it
-is declined, and the review stays blocked with the reason, when the PR is closed, changed since its review, or
-comes from a fork. Deleting a review does not close or revert its GitHub PR.
+current revision again. Merge appears only on blocked reviews and asks for confirmation: it merges the reviewed head
+regardless of the reviewer's verdict, unless the PR is closed or its head changed since the review (the review
+stays blocked with the reason), and GitHub still refuses a PR that is not clean and mergeable. Deleting a review does not close or revert its GitHub PR.
 
 The API has no authentication; access is limited by network reach (the internal gateway route
 and NetworkPolicies). UI disable states improve interaction but are not a security boundary.

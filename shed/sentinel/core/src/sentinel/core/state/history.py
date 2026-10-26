@@ -1,6 +1,6 @@
 """Record history shared by every domain: a timeline of status events and one entry per agent attempt.
 
-Both are append-only and never trimmed. A replay or a fix starts a new attempt; earlier attempts keep their prompt,
+Both are append-only and never trimmed. A replay or an operator's merge starts a new attempt; earlier attempts keep their prompt,
 result, audit trail, and tool budget, so the current record columns are only the latest view of its history.
 """
 

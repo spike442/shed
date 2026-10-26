@@ -39,49 +39,6 @@ class GitWorkspace:
         commit_sha = self.github.create_commit(repository, base_sha, tree, title)
         self.github.create_branch(repository, branch, commit_sha)
 
-    def push_fix(
-        self,
-        repository: RepositoryIdentity,
-        branch: str,
-        head_sha: str,
-        changes: list[ProposedChange],
-        message: str,
-        *,
-        deadline: datetime,
-    ) -> str:
-        """Commit ``changes`` on exactly ``head_sha`` and move ``branch`` to it without force; return the new head.
-
-        A redelivered command finds its own commit on the branch; any other new commit means the branch moved.
-        """
-        path = self.root / repository.owner / f"{repository.name}-pull-requests"
-        git = partial(self._git, repository, deadline=deadline)
-        if (path / ".git").is_dir():
-            git(["-C", str(path), "remote", "set-url", "origin", repository.clone_url])
-        else:
-            path.mkdir(parents=True, exist_ok=True)
-            git(["-C", str(path), "init"])
-            git(["-C", str(path), "remote", "add", "origin", repository.clone_url])
-        remote_ref = f"refs/remotes/origin/{branch}"
-        git(["-C", str(path), "fetch", "--depth=2", "origin", f"+refs/heads/{branch}:{remote_ref}"])
-        remote_head = git(["-C", str(path), "rev-parse", remote_ref]).strip()
-        if remote_head != head_sha:
-            return self._own_fix(git, path, remote_head, head_sha, message)
-        git(["-C", str(path), "checkout", "--force", "--detach", head_sha])
-        git(["-C", str(path), "clean", "-fd"])
-        tree = self._checked_tree(git, path, changes)
-        commit_sha = self.github.create_commit(repository, head_sha, tree, message)
-        self.github.update_branch(repository, branch, commit_sha)
-        return commit_sha
-
-    @staticmethod
-    def _own_fix(git: Callable[[list[str]], str], path: Path, remote_head: str, head_sha: str, message: str) -> str:
-        parent = git(["-C", str(path), "rev-parse", f"{remote_head}^"]).strip()
-        subject = git(["-C", str(path), "log", "-1", "--format=%s", remote_head]).strip()
-        expected_subject = message.splitlines()[0]
-        if parent == head_sha and subject == expected_subject:
-            return remote_head
-        raise RuntimeError("the pull request branch moved since its review")
-
     @staticmethod
     def _checked_tree(git: Callable[[list[str]], str], path: Path, changes: list[ProposedChange]) -> list[dict]:
         """Stage each change inside the checkout, refuse whitespace errors, and return its GitHub tree entries.

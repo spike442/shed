@@ -1,7 +1,7 @@
 """Pure pull-request review state machine.
 
 One record holds every review of a pull request: each run (a new revision, an operator replay, or an operator's
-fix) opens an attempt in ``attempts`` and the record's columns show the latest one. ``TRANSITIONS`` lists
+merge) opens an attempt in ``attempts`` and the record's columns show the latest one. ``TRANSITIONS`` lists
 everything that may happen to a review.
 """
 
@@ -21,17 +21,15 @@ from sentinel.workflow.sre.reviews.events import (
     Acknowledged,
     Deleted,
     Event,
-    FixClaimed,
-    FixDeclined,
-    FixProposed,
-    FixPushed,
+    MergeClaimed,
     Merged,
+    MergeDeclined,
     PrReviewClaimed,
     PrReviewFailed,
     ReplayRejected,
     ResultSaved,
 )
-from sentinel.workflow.sre.reviews.snapshot import JsonObject, PrReview
+from sentinel.workflow.sre.reviews.snapshot import PrReview
 
 Outcome = GenericOutcome[PrReview]
 
@@ -41,16 +39,6 @@ def with_event(state: PrReview, event: str, now: datetime, **details: Any) -> Pr
     return replace(state, timeline=timeline)
 
 
-def fix_result(proposal: JsonObject) -> dict[str, Any]:
-    fix = proposal["fix"]
-    return {
-        "summary": fix["summary"],
-        "commit_message": fix["commit_message"],
-        "changes": fix["changes"],
-        "checks": proposal["checks"],
-    }
-
-
 def _owned(state: PrReview, workflow_id: str) -> bool:
     return state.workflow_id == workflow_id
 
@@ -58,11 +46,6 @@ def _owned(state: PrReview, workflow_id: str) -> bool:
 def _active_for(state: PrReview, workflow_id: str) -> bool:
     owned = _owned(state, workflow_id)
     return owned and state.status in rules.ACTIVE
-
-
-def _fixing_for(state: PrReview, workflow_id: str) -> bool:
-    owned = _owned(state, workflow_id)
-    return owned and state.status == PrReviewStatus.FIXING.value
 
 
 def acknowledged(state: PrReview, event: Acknowledged, now: datetime) -> Outcome:
@@ -220,92 +203,33 @@ def replay_rejected(state: PrReview, event: ReplayRejected, now: datetime) -> Ou
     return Accepted(rejected)
 
 
-def fix_claimed(state: PrReview, event: FixClaimed, now: datetime) -> Outcome:
-    fixing = _fixing_for(state, event.workflow_id)
-    if fixing:
+def merge_claimed(state: PrReview, event: MergeClaimed, now: datetime) -> Outcome:
+    own_attempt = history.latest(state.attempts, event.workflow_id)
+    if _owned(state, event.workflow_id) and own_attempt is not None:
         return Unchanged()
-    if state.status not in rules.FIXABLE:
-        return Rejected(f"only blocked reviews can be fixed, not {state.status}")
+    if state.status not in rules.MERGEABLE:
+        return Rejected(f"only blocked reviews can be merged, not {state.status}")
     attempts = history.started(
         state.attempts,
-        ReviewTrigger.FIX,
+        ReviewTrigger.MERGE,
         event.workflow_id,
-        event.prompt,
+        "",
         now,
         base_sha=state.base_sha,
         head_sha=state.head_sha,
     )
     claimed = replace(
-        state, workflow_id=event.workflow_id, status=PrReviewStatus.FIXING.value, attempts=attempts, updated_at=now
+        state, workflow_id=event.workflow_id, status=PrReviewStatus.RUNNING.value, attempts=attempts, updated_at=now
     )
-    claimed = with_event(claimed, PrReviewStatus.FIXING, now, prompt=event.prompt, head_sha=state.head_sha)
+    claimed = with_event(claimed, PrReviewStatus.RUNNING, now, trigger=ReviewTrigger.MERGE, head_sha=state.head_sha)
     return Accepted(claimed)
 
 
-def fix_declined(state: PrReview, event: FixDeclined, now: datetime) -> Outcome:
-    if not event.workflow_id:
-        if state.status not in rules.FIXABLE:
-            return Rejected(f"only blocked reviews can be fixed, not {state.status}")
-        declined = with_event(state, "fix_declined", now, reason=event.reason)
-        return Accepted(declined)
-    fixing = _fixing_for(state, event.workflow_id)
-    if not fixing:
-        return Rejected("review is not fixing for this workflow")
-    proposed = {} if event.proposal is None else fix_result(event.proposal)
-    reason = {"reason": event.reason}
-    audit_actions = () if event.proposal is None else event.proposal["audit_actions"]
-    tool_budget = None if event.proposal is None else event.proposal["tool_budget"]
-    attempts = history.recorded(
-        state.attempts,
-        event.workflow_id,
-        PrReviewStatus.BLOCKED.value,
-        now,
-        result={**proposed, **reason},
-        audit_actions=audit_actions,
-        tool_budget=tool_budget,
-    )
-    decision_reason = f"Fix declined: {event.reason}"
-    declined = replace(
-        state,
-        status=PrReviewStatus.BLOCKED.value,
-        decision_reason=decision_reason,
-        attempts=attempts,
-        updated_at=now,
-    )
-    declined = with_event(declined, PrReviewStatus.BLOCKED, now, reason=decision_reason)
+def merge_declined(state: PrReview, event: MergeDeclined, now: datetime) -> Outcome:
+    if state.status not in rules.MERGEABLE:
+        return Rejected(f"only blocked reviews can be merged, not {state.status}")
+    declined = with_event(state, "merge_declined", now, reason=event.reason)
     return Accepted(declined)
-
-
-def fix_proposed(state: PrReview, event: FixProposed, now: datetime) -> Outcome:
-    fixing = _fixing_for(state, event.workflow_id)
-    if not fixing:
-        return Rejected("review is not fixing for this workflow")
-    proposal = event.proposal
-    proposed = fix_result(proposal)
-    attempts = history.recorded(
-        state.attempts,
-        event.workflow_id,
-        history.RUNNING,
-        now,
-        result=proposed,
-        audit_actions=proposal["audit_actions"],
-        tool_budget=proposal["tool_budget"],
-    )
-    saved = replace(state, attempts=attempts, tool_budget=proposal["tool_budget"], updated_at=now)
-    return Accepted(saved)
-
-
-def fix_pushed(state: PrReview, event: FixPushed, now: datetime) -> Outcome:
-    fixing = _fixing_for(state, event.workflow_id)
-    if not fixing:
-        return Rejected("review is not fixing for this workflow")
-    pushed = {"commit_sha": event.sha}
-    attempts = history.recorded(state.attempts, event.workflow_id, rules.FIX_PUSHED, now, result=pushed)
-    acknowledged_fix = replace(
-        state, status=PrReviewStatus.ACKNOWLEDGED.value, head_sha=event.sha, attempts=attempts, updated_at=now
-    )
-    acknowledged_fix = with_event(acknowledged_fix, PrReviewStatus.ACKNOWLEDGED, now, head_sha=event.sha)
-    return Accepted(acknowledged_fix)
 
 
 def deleted(_state: PrReview, _event: Deleted, _now: datetime) -> Outcome:
@@ -320,10 +244,8 @@ TRANSITIONS: Mapping[type, Callable[[PrReview, Any, datetime], Outcome]] = Mappi
         ResultSaved: result_saved,
         Merged: merged,
         ReplayRejected: replay_rejected,
-        FixClaimed: fix_claimed,
-        FixDeclined: fix_declined,
-        FixProposed: fix_proposed,
-        FixPushed: fix_pushed,
+        MergeClaimed: merge_claimed,
+        MergeDeclined: merge_declined,
         Deleted: deleted,
     }
 )
