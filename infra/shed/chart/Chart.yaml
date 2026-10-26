@@ -1,8 +1,8 @@
 apiVersion: v2
-appVersion: 0.1.0
+appVersion: 0.1.1
 description: Shed, the door to the platform - one UI over every domain backend, and the API that serves the SRE domain
 name: shed
 type: application
-version: 0.1.0
+version: 0.1.1
 sources:
   - https://github.com/spike442/shed

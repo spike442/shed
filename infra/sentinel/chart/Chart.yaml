@@ -1,8 +1,8 @@
 apiVersion: v2
-appVersion: 0.1.0
+appVersion: 0.1.1
 description: Sentinel SRE domain with the incident and review workflows, the SRE agents worker, executor, knowledge, and Kafka topics
 name: sentinel
 type: application
-version: 0.1.0
+version: 0.1.1
 sources:
   - https://github.com/spike442/shed
