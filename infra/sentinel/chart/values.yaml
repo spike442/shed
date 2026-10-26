@@ -9,8 +9,7 @@ images:
     repository: ghcr.io/spike442/shed/sentinel-executor
     tag: ""
 
-secrets:
-  app: sentinel-secrets
+secret: sentinel-secrets
 
 agents:
   sre:

@@ -1,0 +1,20 @@
+{{- if .Values.agents.sre.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+{{ include "sentinel.metadata" (dict "root" . "name" "sentinel-workflow") }}
+automountServiceAccountToken: false
+---
+{{ include "sentinel.deployment" (dict
+  "root" . "name" "sentinel-workflow" "container" "workflow" "image" .Values.images.workflow
+  "module" "sentinel.workflow" "heartbeat" "/tmp/sentinel-workflow-heartbeat" "grace" 300
+  "knowledgeClient" true "kafkaUser" .Values.kafka.username
+  "ports" (list (dict "name" "metrics" "containerPort" 9100))
+  "secretEnv" (dict
+    "SENTINEL_DATABASE_PASSWORD" "DATABASE_PASSWORD"
+    "SENTINEL_KAFKA_PASSWORD" "KAFKA_PASSWORD"
+    "SENTINEL_DISCORD_WEBHOOK_URL" "DISCORD_WEBHOOK_URL"
+    "SENTINEL_GITHUB_APP_ID" "GITHUB_APP_ID"
+    "SENTINEL_GITHUB_INSTALLATION_ID" "GITHUB_INSTALLATION_ID"
+    "SENTINEL_GITHUB_APP_PRIVATE_KEY" "GITHUB_APP_PRIVATE_KEY")
+  "resources" (dict "requests" (dict "cpu" "20m" "memory" "256Mi") "limits" (dict "memory" "768Mi"))) }}
+{{- end }}

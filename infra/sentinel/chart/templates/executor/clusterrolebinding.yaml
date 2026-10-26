@@ -1,3 +1,0 @@
-{{- if include "sentinel.anyAgentEnabled" . }}
-{{ include "sentinel.clusterRoleBinding" (dict "root" . "role" "sentinel-executor" "account" "sentinel-executor") }}
-{{- end }}

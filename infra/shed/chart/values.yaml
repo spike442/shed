@@ -2,10 +2,28 @@ image:
   repository: ghcr.io/spike442/shed/shed
   tag: ""
 
-sentinel:
-  configMap: sentinel-config
-  secret: sentinel-secrets
-  kafkaUsername: sentinel
+secret: shed-secrets
+
+agents: [pr-review, sre]
+
+postgres:
+  host: postgres0-rw.database.svc.cluster.local
+  database: sentinel
+  user: sentinel
+
+kafka:
+  bootstrapServers: kafka-kafka-bootstrap.messaging.svc.cluster.local:9093
+  username: sentinel
+  consumerGroup: sentinel
+  topics:
+    cluster_alerts: sentinel.cluster.alerts
+    workflow_requests: sentinel.workflow.requests
+    sre_commands: sentinel.sre.commands
+    sre_returns: sentinel.sre.returns
+    pr_review_commands: sentinel.pr-review.commands
+    pr_review_returns: sentinel.pr-review.returns
+    executor_commands: sentinel.executor.commands
+    executor_returns: sentinel.executor.returns
 
 annotations: {}
 
@@ -22,6 +40,6 @@ networkPolicy:
   monitoringNamespace: observability
 
 route:
-  hostname: sentinel.example.test
+  hostname: shed.example.test
   gatewayName: gateway
   gatewayNamespace: network

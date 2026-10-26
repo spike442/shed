@@ -1,0 +1,18 @@
+{{- if .Values.agents.sre.enabled }}
+{{ include "sentinel.clusterIdentity" (dict "root" . "name" "sentinel-executor" "rules" (list
+  (dict "apiGroups" (list "") "resources" (list "pods") "verbs" (list "get" "list" "watch" "delete"))
+  (dict "apiGroups" (list "batch") "resources" (list "jobs") "verbs" (list "get" "list" "watch" "delete"))
+  (dict "apiGroups" (list "apps") "resources" (list "deployments" "statefulsets" "daemonsets") "verbs" (list "get" "list" "patch"))
+  (dict "apiGroups" (list "kustomize.toolkit.fluxcd.io" "helm.toolkit.fluxcd.io" "source.toolkit.fluxcd.io") "resources" (list "*") "verbs" (list "get" "list" "watch" "patch")))) }}
+---
+{{ include "sentinel.deployment" (dict
+  "root" . "name" "sentinel-executor" "container" "executor" "image" .Values.images.executor
+  "module" "sentinel.executor.worker" "heartbeat" "/tmp/sentinel-worker-heartbeat" "grace" (int .Values.executor.actionTimeoutSeconds)
+  "kubeconfig" true "strategy" "Recreate" "kafkaUser" .Values.kafka.users.executor
+  "secretEnv" (dict
+    "SENTINEL_KAFKA_PASSWORD" "KAFKA_EXECUTOR_PASSWORD"
+    "SENTINEL_GITHUB_APP_ID" "GITHUB_APP_ID"
+    "SENTINEL_GITHUB_INSTALLATION_ID" "GITHUB_INSTALLATION_ID"
+    "SENTINEL_GITHUB_APP_PRIVATE_KEY" "GITHUB_APP_PRIVATE_KEY")
+  "resources" (dict "requests" (dict "cpu" "20m" "memory" "128Mi") "limits" (dict "memory" "512Mi"))) }}
+{{- end }}

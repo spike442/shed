@@ -28,7 +28,7 @@ the application, run its test suite, or validate all Kubernetes/chart semantics.
 
 Mandatory S3 instructions consist of the repository's system prompt, its review or fix action, and one
 `actions/<tool>.md` per tool (`search_knowledge.md`, and `read_file.md` for a fix), in that order. A review's only tool is `search_knowledge` (a fix adds `read_file`); the review agent runs in the SRE process (the
-`sre` service account and its read-only `sre-read` ClusterRole, kubeconfig, and egress), but the reviewer has no
+`sentinel-sre` service account and its read-only `sentinel-sre` ClusterRole, kubeconfig, and egress), but the reviewer has no
 cluster tool, so it judges a change from the repository. The model receives
 the diff, PR metadata, retrieved knowledge, the last five finished attempts on the PR, and for a replay the
 operator's instruction (`actions/replay.md`), then returns structured risk, confidence, summary, and findings. Tool activity is PR-scoped audit.

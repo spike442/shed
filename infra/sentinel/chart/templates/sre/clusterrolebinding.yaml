@@ -1,3 +1,0 @@
-{{- if .Values.agents.sre.enabled }}
-{{ include "sentinel.clusterRoleBinding" (dict "root" . "role" "sre-read" "account" "sre") }}
-{{- end }}

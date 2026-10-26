@@ -1,0 +1,101 @@
+apiVersion: v1
+kind: ServiceAccount
+{{ include "shed.metadata" (dict "root" . "name" "shed") }}
+automountServiceAccountToken: false
+---
+apiVersion: apps/v1
+kind: Deployment
+{{ include "shed.metadata" (dict "root" . "name" "shed") }}
+  {{- with .Values.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/name: shed}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print .Template.BasePath "/config.yaml") . | sha256sum }}
+      labels:
+        {{- include "shed.labels" . | nindent 8 }}
+    spec:
+      serviceAccountName: shed
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 300
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+      - name: shed
+        image: {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
+        imagePullPolicy: IfNotPresent
+        ports:
+        - {name: http, containerPort: 8070}
+        - {name: metrics, containerPort: 9100}
+        startupProbe: {httpGet: {path: /api/healthz, port: http}, failureThreshold: 30, periodSeconds: 10}
+        readinessProbe: {httpGet: {path: /api/readyz, port: http}}
+        livenessProbe: {httpGet: {path: /api/healthz, port: http}}
+        env:
+        - {name: HOME, value: /home/shed}
+        - {name: SHED_KAFKA_USERNAME, value: {{ .Values.kafka.username | quote }}}
+        - name: SHED_KAFKA_PASSWORD
+          valueFrom: {secretKeyRef: {name: {{ .Values.secret }}, key: KAFKA_PASSWORD}}
+        - name: SHED_DATABASE_PASSWORD
+          valueFrom: {secretKeyRef: {name: {{ .Values.secret }}, key: DATABASE_PASSWORD}}
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities: {drop: [ALL]}
+        resources:
+          requests: {cpu: 20m, memory: 256Mi}
+          limits: {memory: 768Mi}
+        volumeMounts:
+        - {name: tmp, mountPath: /tmp}
+        - {name: home, mountPath: /home/shed}
+        - {name: config, mountPath: /etc/shed, readOnly: true}
+        - {name: config, mountPath: /app/ui/domains.json, subPath: domains.json, readOnly: true}
+      volumes:
+      - {name: tmp, emptyDir: {}}
+      - {name: home, emptyDir: {}}
+      - {name: config, configMap: {name: shed-config}}
+---
+apiVersion: v1
+kind: Service
+{{ include "shed.metadata" (dict "root" . "name" "shed") }}
+spec:
+  selector: {app.kubernetes.io/name: shed}
+  ports: [{name: http, port: 8070, targetPort: http}]
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+{{ include "shed.metadata" (dict "root" . "name" "shed") }}
+spec:
+  hostnames: [{{ .Values.route.hostname | quote }}]
+  parentRefs: [{name: {{ .Values.route.gatewayName }}, namespace: {{ .Values.route.gatewayNamespace }}}]
+  rules:
+  - matches: [{path: {type: PathPrefix, value: /}}]
+    backendRefs: [{name: shed, port: 8070}]
+{{- if .Values.networkPolicy.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+{{ include "shed.metadata" (dict "root" . "name" "shed") }}
+spec:
+  podSelector:
+    matchLabels: {app.kubernetes.io/name: shed}
+  policyTypes: [Ingress]
+  ingress:
+  - from: [{namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: {{ .Values.route.gatewayNamespace }}}}}]
+    ports: [{port: 8070, protocol: TCP}]
+  - from:
+    - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: {{ .Values.networkPolicy.monitoringNamespace }}}}
+      podSelector: {matchLabels: {app.kubernetes.io/name: alertmanager}}
+    ports: [{port: 8070, protocol: TCP}]
+  - from: [{namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: {{ .Values.networkPolicy.monitoringNamespace }}}}}]
+    ports: [{port: 9100, protocol: TCP}]
+{{- end }}

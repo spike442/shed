@@ -3,9 +3,9 @@ from unittest.mock import Mock
 
 
 def test_api_starts_and_reports_healthy(monkeypatch) -> None:
-    monkeypatch.setenv("SENTINEL_DATABASE_PASSWORD", "test")
-    monkeypatch.setenv("SENTINEL_KAFKA_USERNAME", "sentinel")
-    monkeypatch.setenv("SENTINEL_KAFKA_PASSWORD", "test")
+    monkeypatch.setenv("SHED_DATABASE_PASSWORD", "test")
+    monkeypatch.setenv("SHED_KAFKA_USERNAME", "sentinel")
+    monkeypatch.setenv("SHED_KAFKA_PASSWORD", "test")
     database = Mock()
     monkeypatch.setattr("shed.api.lifespan.PostgresDatabase", Mock(return_value=database))
     monkeypatch.setattr("shed.api.lifespan.serve", Mock())

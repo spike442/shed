@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+{{ include "stonks.metadata" (dict "root" . "name" "stonks-api") }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/name: stonks-api}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print .Template.BasePath "/config.yaml") . | sha256sum }}
+      labels:
+        {{- include "stonks.labels" (dict "root" . "component" "stonks-api") | nindent 8 }}
+    spec:
+      serviceAccountName: stonks
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+      - name: stonks-api
+        image: {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
+        imagePullPolicy: IfNotPresent
+        ports: [{name: http, containerPort: 8090}]
+        readinessProbe: {httpGet: {path: /api/stonks/readyz, port: http}}
+        livenessProbe: {httpGet: {path: /api/stonks/healthz, port: http}}
+        env:
+        - {name: STONKS_CONFIG_DIR, value: /etc/stonks}
+        - name: S3_ACCESS_KEY_ID
+          valueFrom: {secretKeyRef: {name: {{ .Values.secret }}, key: S3_ACCESS_KEY_ID}}
+        - name: S3_SECRET_ACCESS_KEY
+          valueFrom: {secretKeyRef: {name: {{ .Values.secret }}, key: S3_SECRET_ACCESS_KEY}}
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities: {drop: [ALL]}
+        resources:
+          requests: {cpu: 10m, memory: 96Mi}
+          limits: {memory: 256Mi}
+        volumeMounts:
+        - {name: config, mountPath: /etc/stonks, readOnly: true}
+        - {name: tmp, mountPath: /tmp}
+      volumes:
+      - {name: config, configMap: {name: stonks-config}}
+      - {name: tmp, emptyDir: {}}
+---
+apiVersion: v1
+kind: Service
+{{ include "stonks.metadata" (dict "root" . "name" "stonks-api") }}
+spec:
+  selector: {app.kubernetes.io/name: stonks-api}
+  ports: [{name: http, port: 8090, targetPort: http}]
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+{{ include "stonks.metadata" (dict "root" . "name" "stonks-api") }}
+spec:
+  hostnames: [{{ .Values.route.hostname | quote }}]
+  parentRefs: [{name: {{ .Values.route.gatewayName }}, namespace: {{ .Values.route.gatewayNamespace }}}]
+  rules:
+  - matches: [{path: {type: PathPrefix, value: /api/stonks}}]
+    backendRefs: [{name: stonks-api, port: 8090}]

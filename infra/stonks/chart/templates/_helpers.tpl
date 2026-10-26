@@ -1,20 +1,29 @@
-{{- define "stonks.standardLabels" -}}
-helm.sh/chart: {{ printf "%s-%s" .Chart.Name (.Chart.Version | replace "+" "_") | quote }}
-app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
-app.kubernetes.io/instance: {{ .Release.Name | quote }}
+{{- define "stonks.labels" -}}
+app.kubernetes.io/name: {{ .component }}
 app.kubernetes.io/part-of: stonks
+app.kubernetes.io/instance: {{ .root.Release.Name }}
+app.kubernetes.io/managed-by: {{ .root.Release.Service }}
+helm.sh/chart: {{ printf "%s-%s" .root.Chart.Name .root.Chart.Version }}
 {{- end -}}
 
-{{- define "stonks.serviceAccount" -}}
-apiVersion: v1
-kind: ServiceAccount
+{{- define "stonks.metadata" -}}
 metadata:
-  labels:
-    app.kubernetes.io/name: {{ .name }}
-{{ include "stonks.standardLabels" .root | indent 4 }}
   name: {{ .name }}
   namespace: {{ .root.Release.Namespace }}
-{{- if .withoutToken }}
-automountServiceAccountToken: false
-{{- end }}
+  labels:
+    {{- include "stonks.labels" (dict "root" .root "component" (.component | default .name)) | nindent 4 }}
+{{- end -}}
+
+{{- define "stonks.role" -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+{{ include "stonks.metadata" . }}
+rules:
+{{ toYaml .rules }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+{{ include "stonks.metadata" . }}
+roleRef: {apiGroup: rbac.authorization.k8s.io, kind: Role, name: {{ .name }}}
+subjects: [{kind: ServiceAccount, name: {{ .account }}, namespace: {{ .accountNamespace | default .root.Release.Namespace }}}]
 {{- end -}}

@@ -1,0 +1,49 @@
+{{- if and .Values.agents.sre.enabled .Values.networkPolicy.enabled }}
+{{- $np := .Values.networkPolicy }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+{{ include "sentinel.metadata" (dict "root" . "name" "sentinel-workflow") }}
+spec:
+  podSelector:
+    matchLabels: {app.kubernetes.io/name: sentinel-workflow}
+  policyTypes: [Ingress]
+  ingress:
+  - from: [{namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: {{ $np.monitoringNamespace }}}}}]
+    ports: [{port: 9100, protocol: TCP}]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+{{ include "sentinel.metadata" (dict "root" . "name" "sentinel-workers" "component" "sentinel") }}
+spec:
+  podSelector:
+    matchExpressions: [{key: app.kubernetes.io/name, operator: In, values: [sentinel-sre, sentinel-executor]}]
+  policyTypes: [Ingress]
+{{- if $np.ciliumEgress }}
+{{- $to := dict
+  "dns" (dict "toEndpoints" (list (dict "matchLabels" (dict "k8s:io.kubernetes.pod.namespace" "kube-system" "k8s-app" "kube-dns"))) "toPorts" (list (dict "ports" (list (dict "port" "53" "protocol" "ANY")))))
+  "apiserver" (dict "toEntities" (list "kube-apiserver"))
+  "knowledge" (dict "toEndpoints" (list (dict "matchLabels" (dict "app.kubernetes.io/name" "knowledge"))) "toPorts" (list (dict "ports" (list (dict "port" "9092" "protocol" "TCP")))))
+  "prometheus" (dict "toEndpoints" (list (dict "matchLabels" (dict "k8s:io.kubernetes.pod.namespace" $np.monitoringNamespace "app.kubernetes.io/name" "prometheus"))) "toPorts" (list (dict "ports" (list (dict "port" "9090" "protocol" "TCP")))))
+  "storage" (dict "toEndpoints" (list (dict "matchLabels" (dict "k8s:io.kubernetes.pod.namespace" $np.storageNamespace))) "toPorts" (list (dict "ports" (list (dict "port" "9000" "protocol" "TCP")))))
+  "messaging" (dict "toEndpoints" (list (dict "matchLabels" (dict "k8s:io.kubernetes.pod.namespace" $np.messagingNamespace))) "toPorts" (list (dict "ports" (list (dict "port" "9093" "protocol" "TCP")))))
+  "internet" (dict "toEntities" (list "world") "toPorts" (list (dict "ports" (list (dict "port" "443" "protocol" "TCP")))))
+}}
+{{- $egress := dict
+  "sentinel-sre" (list "dns" "apiserver" "knowledge" "prometheus" "storage" "messaging" "internet")
+  "sentinel-executor" (list "dns" "apiserver" "messaging" "internet")
+}}
+{{- range $name, $rules := $egress }}
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+{{ include "sentinel.metadata" (dict "root" $ "name" (printf "%s-egress" $name) "component" $name) }}
+spec:
+  endpointSelector:
+    matchLabels: {app.kubernetes.io/name: {{ $name }}}
+  egress:
+  {{- range $rules }}
+  - {{ index $to . | toJson }}
+  {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

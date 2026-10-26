@@ -1,460 +1,83 @@
 {
   "$schema": "https://json-schema.org/draft-07/schema#",
   "type": "object",
-  "required": [
-    "images",
-    "secrets",
-    "postgres",
-    "knowledge",
-    "kafka",
-    "s3",
-    "prometheus",
-    "alertmanager",
-    "executor"
-  ],
+  "additionalProperties": false,
+  "required": ["images", "secret", "agents", "executor", "postgres", "knowledge", "kafka", "s3", "prometheus", "alertmanager", "networkPolicy"],
   "properties": {
+    "global": {"type": "object"},
     "images": {
-      "type": "object",
-      "required": [
-        "workflow",
-        "sre",
-        "executor"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "workflow": {
-          "$ref": "#/definitions/image"
-        },
-        "sre": {
-          "$ref": "#/definitions/image"
-        },
-        "executor": {
-          "$ref": "#/definitions/image"
-        }
-      }
+      "type": "object", "additionalProperties": false, "required": ["workflow", "sre", "executor"],
+      "properties": {"workflow": {"$ref": "#/definitions/image"}, "sre": {"$ref": "#/definitions/image"}, "executor": {"$ref": "#/definitions/image"}}
     },
-    "secrets": {
-      "type": "object",
-      "required": [
-        "app"
-      ],
-      "properties": {
-        "app": {
-          "$ref": "#/definitions/name"
-        }
-      }
-    },
+    "secret": {"$ref": "#/definitions/name"},
     "agents": {
-      "type": "object",
+      "type": "object", "additionalProperties": false, "required": ["sre", "pr-review"],
       "properties": {
-        "sre": {
-          "type": "object",
-          "required": [
-            "enabled",
-            "runTimeoutSeconds"
-          ],
-          "properties": {
-            "enabled": {
-              "type": "boolean"
-            },
-            "runTimeoutSeconds": {
-              "$ref": "#/definitions/seconds"
-            }
-          }
-        },
-        "pr-review": {
-          "type": "object",
-          "required": [
-            "runTimeoutSeconds"
-          ],
-          "additionalProperties": false,
-          "properties": {
-            "runTimeoutSeconds": {
-              "$ref": "#/definitions/seconds"
-            }
-          }
-        }
+        "sre": {"type": "object", "additionalProperties": false, "required": ["enabled", "runTimeoutSeconds"],
+          "properties": {"enabled": {"type": "boolean"}, "runTimeoutSeconds": {"$ref": "#/definitions/seconds"}}},
+        "pr-review": {"type": "object", "additionalProperties": false, "required": ["runTimeoutSeconds"],
+          "properties": {"runTimeoutSeconds": {"$ref": "#/definitions/seconds"}}}
       }
     },
     "executor": {
-      "type": "object",
-      "required": [
-        "actionTimeoutSeconds"
-      ],
-      "properties": {
-        "actionTimeoutSeconds": {
-          "$ref": "#/definitions/seconds"
-        }
-      }
+      "type": "object", "additionalProperties": false, "required": ["actionTimeoutSeconds"],
+      "properties": {"actionTimeoutSeconds": {"$ref": "#/definitions/seconds"}}
     },
-    "postgres": {
-      "type": "object",
-      "required": [
-        "host",
-        "database",
-        "user"
-      ],
-      "properties": {
-        "host": {
-          "$ref": "#/definitions/name"
-        },
-        "database": {
-          "$ref": "#/definitions/name"
-        },
-        "user": {
-          "$ref": "#/definitions/name"
-        }
-      }
-    },
+    "postgres": {"$ref": "#/definitions/names", "required": ["host", "database", "user"], "propertyNames": {"enum": ["host", "database", "user"]}},
     "knowledge": {
-      "type": "object",
-      "required": [
-        "url",
-        "domain"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "url": {
-          "type": "string",
-          "minLength": 1
-        },
-        "domain": {
-          "type": "string",
-          "pattern": "^[a-z][a-z0-9_]*$"
-        }
-      }
+      "type": "object", "additionalProperties": false, "required": ["url", "domain"],
+      "properties": {"url": {"$ref": "#/definitions/url"}, "domain": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"}}
     },
     "kafka": {
-      "type": "object",
-      "required": [
-        "bootstrapServers",
-        "username",
-        "consumerGroup",
-        "users",
-        "topics",
-        "cluster",
-        "topicNamespace",
-        "topicReplicas",
-        "topicRetentionMs"
-      ],
+      "type": "object", "additionalProperties": false,
+      "required": ["bootstrapServers", "username", "consumerGroup", "users", "cluster", "topicNamespace", "topicReplicas", "topicRetentionMs", "topics"],
       "properties": {
-        "bootstrapServers": {
-          "$ref": "#/definitions/name"
-        },
-        "username": {
-          "$ref": "#/definitions/name"
-        },
-        "consumerGroup": {
-          "$ref": "#/definitions/name"
-        },
-        "users": {
-          "type": "object",
-          "required": [
-            "sre",
-            "executor"
-          ],
-          "properties": {
-            "sre": {
-              "$ref": "#/definitions/name"
-            },
-            "executor": {
-              "$ref": "#/definitions/name"
-            }
-          }
-        },
+        "bootstrapServers": {"$ref": "#/definitions/name"},
+        "username": {"$ref": "#/definitions/name"},
+        "consumerGroup": {"$ref": "#/definitions/name"},
+        "users": {"$ref": "#/definitions/names", "required": ["sre", "executor"], "propertyNames": {"enum": ["sre", "executor"]}},
+        "cluster": {"$ref": "#/definitions/name"},
+        "topicNamespace": {"$ref": "#/definitions/name"},
+        "topicReplicas": {"type": "integer", "minimum": 1},
+        "topicRetentionMs": {"type": "integer", "minimum": 1},
         "topics": {
           "type": "object",
-          "required": [
-            "cluster_alerts",
-            "workflow_requests",
-            "sre_commands",
-            "sre_returns",
-            "pr_review_commands",
-            "pr_review_returns",
-            "executor_commands",
-            "executor_returns"
-          ],
-          "additionalProperties": false,
-          "properties": {
-            "cluster_alerts": {
-              "type": "object",
-              "required": [
-                "name",
-                "partitions"
-              ],
-              "additionalProperties": false,
-              "properties": {
-                "name": {
-                  "$ref": "#/definitions/name"
-                },
-                "partitions": {
-                  "type": "integer",
-                  "minimum": 1
-                }
-              }
-            },
-            "workflow_requests": {
-              "type": "object",
-              "required": [
-                "name",
-                "partitions"
-              ],
-              "additionalProperties": false,
-              "properties": {
-                "name": {
-                  "$ref": "#/definitions/name"
-                },
-                "partitions": {
-                  "type": "integer",
-                  "minimum": 1
-                }
-              }
-            },
-            "sre_commands": {
-              "type": "object",
-              "required": [
-                "name",
-                "partitions"
-              ],
-              "additionalProperties": false,
-              "properties": {
-                "name": {
-                  "$ref": "#/definitions/name"
-                },
-                "partitions": {
-                  "type": "integer",
-                  "minimum": 1
-                }
-              }
-            },
-            "sre_returns": {
-              "type": "object",
-              "required": [
-                "name",
-                "partitions"
-              ],
-              "additionalProperties": false,
-              "properties": {
-                "name": {
-                  "$ref": "#/definitions/name"
-                },
-                "partitions": {
-                  "type": "integer",
-                  "minimum": 1
-                }
-              }
-            },
-            "pr_review_commands": {
-              "type": "object",
-              "required": [
-                "name",
-                "partitions"
-              ],
-              "additionalProperties": false,
-              "properties": {
-                "name": {
-                  "$ref": "#/definitions/name"
-                },
-                "partitions": {
-                  "type": "integer",
-                  "minimum": 1
-                }
-              }
-            },
-            "pr_review_returns": {
-              "type": "object",
-              "required": [
-                "name",
-                "partitions"
-              ],
-              "additionalProperties": false,
-              "properties": {
-                "name": {
-                  "$ref": "#/definitions/name"
-                },
-                "partitions": {
-                  "type": "integer",
-                  "minimum": 1
-                }
-              }
-            },
-            "executor_commands": {
-              "type": "object",
-              "required": [
-                "name",
-                "partitions"
-              ],
-              "additionalProperties": false,
-              "properties": {
-                "name": {
-                  "$ref": "#/definitions/name"
-                },
-                "partitions": {
-                  "type": "integer",
-                  "minimum": 1
-                }
-              }
-            },
-            "executor_returns": {
-              "type": "object",
-              "required": [
-                "name",
-                "partitions"
-              ],
-              "additionalProperties": false,
-              "properties": {
-                "name": {
-                  "$ref": "#/definitions/name"
-                },
-                "partitions": {
-                  "type": "integer",
-                  "minimum": 1
-                }
-              }
-            }
+          "required": ["cluster_alerts", "workflow_requests", "sre_commands", "sre_returns", "pr_review_commands", "pr_review_returns", "executor_commands", "executor_returns"],
+          "propertyNames": {"enum": ["cluster_alerts", "workflow_requests", "sre_commands", "sre_returns", "pr_review_commands", "pr_review_returns", "executor_commands", "executor_returns"]},
+          "additionalProperties": {
+            "type": "object", "additionalProperties": false, "required": ["name", "partitions"],
+            "properties": {"name": {"$ref": "#/definitions/name"}, "partitions": {"type": "integer", "minimum": 1}}
           }
-        },
-        "cluster": {
-          "$ref": "#/definitions/name"
-        },
-        "topicNamespace": {
-          "$ref": "#/definitions/name"
-        },
-        "topicReplicas": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "topicRetentionMs": {
-          "type": "integer",
-          "minimum": 1
         }
       }
     },
     "s3": {
-      "type": "object",
-      "required": [
-        "endpoint",
-        "region",
-        "bucket"
-      ],
-      "properties": {
-        "endpoint": {
-          "$ref": "#/definitions/url"
-        },
-        "region": {
-          "$ref": "#/definitions/name"
-        },
-        "bucket": {
-          "$ref": "#/definitions/name"
-        }
-      }
+      "type": "object", "additionalProperties": false, "required": ["endpoint", "region", "bucket"],
+      "properties": {"endpoint": {"$ref": "#/definitions/url"}, "region": {"$ref": "#/definitions/name"}, "bucket": {"$ref": "#/definitions/name"}}
     },
-    "prometheus": {
-      "type": "object",
-      "required": [
-        "url"
-      ],
-      "properties": {
-        "url": {
-          "type": "string"
-        }
-      }
-    },
-    "alertmanager": {
-      "type": "object",
-      "required": [
-        "url"
-      ],
-      "properties": {
-        "url": {
-          "type": "string"
-        }
-      }
-    },
+    "prometheus": {"$ref": "#/definitions/endpoint"},
+    "alertmanager": {"$ref": "#/definitions/endpoint"},
     "networkPolicy": {
-      "type": "object",
+      "type": "object", "additionalProperties": false,
+      "required": ["enabled", "monitoringNamespace", "storageNamespace", "messagingNamespace", "ciliumEgress"],
       "properties": {
-        "enabled": {
-          "type": "boolean"
-        },
-        "monitoringNamespace": {
-          "$ref": "#/definitions/name"
-        },
-        "storageNamespace": {
-          "$ref": "#/definitions/name"
-        },
-        "messagingNamespace": {
-          "$ref": "#/definitions/name"
-        },
-        "ciliumEgress": {
-          "type": "boolean"
-        }
+        "enabled": {"type": "boolean"},
+        "monitoringNamespace": {"$ref": "#/definitions/name"},
+        "storageNamespace": {"$ref": "#/definitions/name"},
+        "messagingNamespace": {"$ref": "#/definitions/name"},
+        "ciliumEgress": {"type": "boolean"}
       }
     }
   },
-  "allOf": [
-    {
-      "if": {
-        "properties": {
-          "agents": {
-            "properties": {
-              "sre": {
-                "properties": {
-                  "enabled": {
-                    "const": true
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "prometheus": {
-            "properties": {
-              "url": {
-                "$ref": "#/definitions/url"
-              }
-            }
-          },
-          "alertmanager": {
-            "properties": {
-              "url": {
-                "$ref": "#/definitions/url"
-              }
-            }
-          }
-        }
-      }
-    }
-  ],
   "definitions": {
-    "name": {
-      "type": "string",
-      "minLength": 1
-    },
-    "url": {
-      "type": "string",
-      "pattern": "^https?://[^\\s]+$"
-    },
+    "name": {"type": "string", "minLength": 1},
+    "names": {"type": "object", "additionalProperties": {"$ref": "#/definitions/name"}},
+    "url": {"type": "string", "pattern": "^https?://[^\\s]+$"},
+    "seconds": {"type": "integer", "minimum": 1},
+    "endpoint": {"type": "object", "additionalProperties": false, "required": ["url"], "properties": {"url": {"$ref": "#/definitions/url"}}},
     "image": {
-      "type": "object",
-      "required": [
-        "repository"
-      ],
-      "properties": {
-        "repository": {
-          "$ref": "#/definitions/name"
-        },
-        "tag": {
-          "type": "string"
-        }
-      }
-    },
-    "seconds": {
-      "type": "integer",
-      "minimum": 1
+      "type": "object", "additionalProperties": false, "required": ["repository"],
+      "properties": {"repository": {"$ref": "#/definitions/name"}, "tag": {"type": "string"}}
     }
   }
 }

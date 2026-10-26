@@ -1,0 +1,77 @@
+{{- $domains := include "knowledge.domains" . | fromYaml }}
+apiVersion: apps/v1
+kind: Deployment
+{{ include "knowledge.metadata" (dict "root" . "name" "knowledge") }}
+spec:
+  replicas: 1
+  strategy: {type: Recreate}
+  selector:
+    matchLabels: {app.kubernetes.io/name: knowledge}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print .Template.BasePath "/config.yaml") . | sha256sum }}
+      labels:
+        {{- include "knowledge.labels" . | nindent 8 }}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+      - name: knowledge
+        image: {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
+        imagePullPolicy: IfNotPresent
+        ports: [{name: http, containerPort: 9092}]
+        startupProbe: {httpGet: {path: /healthz, port: http}, failureThreshold: 30, periodSeconds: 10}
+        readinessProbe: {httpGet: {path: /readyz, port: http}}
+        livenessProbe: {httpGet: {path: /healthz, port: http}}
+        env:
+        - {name: HOME, value: /home/knowledge}
+        - {name: KNOWLEDGE_CONFIG_DIR, value: /etc/knowledge}
+        - name: KNOWLEDGE_CLICKHOUSE_PASSWORD
+          valueFrom: {secretKeyRef: {name: {{ .Values.secret }}, key: CLICKHOUSE_PASSWORD}}
+        {{- range $domain, $_ := $domains }}
+        {{- range $key := list "S3_ACCESS_KEY_ID" "S3_SECRET_ACCESS_KEY" }}
+        - name: KNOWLEDGE_{{ upper $domain }}_{{ $key }}
+          valueFrom: {secretKeyRef: {name: {{ $.Values.secret }}, key: {{ upper $domain }}_{{ $key }}}}
+        {{- end }}
+        {{- end }}
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities: {drop: [ALL]}
+        resources:
+          requests: {cpu: "1", memory: 1Gi}
+          limits: {cpu: "3", memory: 4Gi}
+        volumeMounts:
+        - {name: tmp, mountPath: /tmp}
+        - {name: home, mountPath: /home/knowledge}
+        - {name: config, mountPath: /etc/knowledge, readOnly: true}
+      volumes:
+      - {name: tmp, emptyDir: {}}
+      - {name: home, emptyDir: {}}
+      - {name: config, configMap: {name: knowledge-config}}
+---
+apiVersion: v1
+kind: Service
+{{ include "knowledge.metadata" (dict "root" . "name" "knowledge") }}
+spec:
+  selector: {app.kubernetes.io/name: knowledge}
+  ports: [{name: http, port: 9092, targetPort: http}]
+{{- if .Values.networkPolicy.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+{{ include "knowledge.metadata" (dict "root" . "name" "knowledge") }}
+spec:
+  podSelector:
+    matchLabels: {app.kubernetes.io/name: knowledge}
+  policyTypes: [Ingress]
+  ingress:
+  - from: [{podSelector: {matchLabels: {shed/knowledge-client: "true"}}}]
+    ports: [{port: 9092, protocol: TCP}]
+{{- end }}

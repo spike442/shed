@@ -20,8 +20,8 @@ The `agents` namespace runs Shed's three releases, each an OCIRepository chart f
 with its own version: `sentinel` (`sentinel/`: Workflow, the `sentinel-sre` Deployment running both SRE agents in one
 container, sentinel-executor, the knowledge API, `sentinel-config`, and Sentinel's Kafka topics), `shed`
 (`shed/`: the `shed` Deployment, whose API serves `/api` and whose bundled UI serves the rest, and its HTTPRoute; its Flux Kustomization
-depends on `sentinel`, because the API mounts `sentinel-config` and reads `sentinel-secrets`, and Reloader restarts it
-when either changes), and `stonks` (`stonks/`: the `stonks-api` backend under `/api/stonks`, the `stonks-config`
+depends on `sentinel`, because the API reads Sentinel's PostgreSQL database and Kafka topics through its own `shed-config` and
+`shed-secrets`, and Reloader restarts it when `shed-secrets` changes), and `stonks` (`stonks/`: the `stonks-api` backend under `/api/stonks`, the `stonks-config`
 ConfigMap, and the RBAC Airflow and Spark need), beside SearXNG. Sentinel owns its GitOps support resources, PostgreSQL
 database and roles, and its Kafka users and ACLs. Flux dependencies connect prerequisite Kustomizations to each
 application; keep setup with its owner rather than introducing separate platform applications for app-specific
@@ -64,8 +64,8 @@ and UI API access. Test one real event before broad replay. Agent images run as 
 Kafka consumers. Current image versions and replicas must be read
 from manifests, not this document.
 
-The Shed API, Workflow, sentinel-executor, and the agents use different subsets of the `sentinel-secrets`
-ExternalSecret. Do not remove a key merely because one Deployment does not consume it: another
+Workflow, sentinel-executor, and the agents use different subsets of the `sentinel-secrets`
+ExternalSecret; the Shed API and the knowledge service read their own `shed-secrets` and `knowledge-secrets`. Do not remove a key merely because one Deployment does not consume it: another
 Deployment or a worker may still require it. The local SQL task reads its database
 passwords directly from 1Password. Compare
 each `secretKeyRef` and projected volume item with the ExternalSecret and the corresponding

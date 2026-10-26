@@ -1,0 +1,21 @@
+{{- if .Values.agents.sre.enabled }}
+{{- $longestRun := max (int .Values.agents.sre.runTimeoutSeconds) (int (index .Values.agents "pr-review").runTimeoutSeconds) }}
+{{ include "sentinel.clusterIdentity" (dict "root" . "name" "sentinel-sre" "rules" (list
+  (dict "apiGroups" (list "") "resources" (list "nodes" "namespaces" "pods" "pods/log" "events" "services" "endpoints" "persistentvolumeclaims" "persistentvolumes" "configmaps") "verbs" (list "get" "list" "watch"))
+  (dict "apiGroups" (list "apps") "resources" (list "deployments" "replicasets" "statefulsets" "daemonsets") "verbs" (list "get" "list" "watch"))
+  (dict "apiGroups" (list "batch") "resources" (list "jobs" "cronjobs") "verbs" (list "get" "list" "watch"))
+  (dict "apiGroups" (list "kustomize.toolkit.fluxcd.io" "helm.toolkit.fluxcd.io" "source.toolkit.fluxcd.io" "notification.toolkit.fluxcd.io") "resources" (list "*") "verbs" (list "get" "list" "watch"))
+  (dict "apiGroups" (list "gateway.networking.k8s.io" "gateway.envoyproxy.io" "cert-manager.io" "external-secrets.io" "kyverno.io" "policies.kyverno.io" "kopiur.home-operations.com") "resources" (list "*") "verbs" (list "get" "list" "watch")))) }}
+---
+{{ include "sentinel.deployment" (dict
+  "root" . "name" "sentinel-sre" "container" "sre" "image" .Values.images.sre
+  "module" "sentinel.sre.worker" "heartbeat" "/tmp/sentinel-worker-heartbeat" "grace" $longestRun
+  "kubeconfig" true "knowledgeClient" true "kafkaUser" .Values.kafka.users.sre
+  "scratch" (dict "repo" "/data")
+  "secretEnv" (dict
+    "SENTINEL_KAFKA_PASSWORD" "KAFKA_SRE_PASSWORD"
+    "LLM_API_KEY" "LLM_API_KEY"
+    "S3_ACCESS_KEY_ID" "S3_ACCESS_KEY_ID"
+    "S3_SECRET_ACCESS_KEY" "S3_SECRET_ACCESS_KEY")
+  "resources" (dict "requests" (dict "cpu" "100m" "memory" "384Mi") "limits" (dict "memory" "1Gi"))) }}
+{{- end }}

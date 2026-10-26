@@ -21,10 +21,14 @@ runs:
     - name: Render chart config
       shell: bash
       run: |
-        directory="$RUNNER_TEMP/sentinel-config"
-        mkdir -p "$directory"
-        helm template sentinel infra/sentinel/chart --namespace agents \
-          --show-only templates/common/config.yaml \
-          | yq ea -N '.data | to_entries | .[] | .key + "\t" + (.value | @base64)' \
-          | while IFS=$'\t' read -r name content; do base64 -d <<< "$content" > "$directory/$name"; done
-        echo "SENTINEL_CONFIG_DIR=$directory" >> "$GITHUB_ENV"
+        render() {
+          local chart=$1 variable=$2
+          local directory="$RUNNER_TEMP/$chart-config"
+          mkdir -p "$directory"
+          helm template "$chart" "infra/$chart/chart" --namespace agents --show-only templates/config.yaml \
+            | yq ea -N '.data | to_entries | .[] | .key + "\t" + (.value | @base64)' \
+            | while IFS=$'\t' read -r name content; do base64 -d <<< "$content" > "$directory/$name"; done
+          echo "$variable=$directory" >> "$GITHUB_ENV"
+        }
+        render sentinel SENTINEL_CONFIG_DIR
+        render shed SHED_CONFIG_DIR

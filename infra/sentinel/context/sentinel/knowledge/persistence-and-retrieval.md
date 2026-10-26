@@ -60,7 +60,8 @@ Sentinel's knowledge is served by the Shed knowledge service (`shed/knowledge/`,
 knowledge data: the documents in its `sentinel` bucket and its two tables in the knowledge service's `knowledge` ClickHouse
 database (`knowledge.sentinel_documents` and `knowledge.sentinel_chunks`, created by
 `infra/sentinel/sql/<version>/clickhouse/30-knowledge/`). The knowledge chart's `config/knowledge.yaml` names those tables, the
-bucket, and the collections, and the knowledge Deployment reads the bucket with Sentinel's S3 credential from `sentinel-secrets`.
+bucket, and the collections, and the knowledge Deployment reads the bucket with Sentinel's S3 credential from its own
+`knowledge-secrets`.
 
 Repository knowledge in `infra/sentinel/context/<repository>/knowledge/` is published to
 `s3://sentinel/context/<repository>/knowledge/`. Metadata lists eligible domains so SRE and PR Review

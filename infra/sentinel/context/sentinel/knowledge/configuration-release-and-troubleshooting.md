@@ -27,10 +27,11 @@ Fix commits are created through the GitHub API with GitHub App installation toke
 as the App and there is no SSH deploy or signing key. The platform shares one S3
 credential, `S3_ACCESS_KEY_ID`/`S3_SECRET_ACCESS_KEY` from the `sentinel` item, for knowledge,
 SRE and PR Review prompts, and `task artifacts`. The knowledge service owns its ClickHouse
-credential and reads Sentinel's bucket with Sentinel's S3 credential from `sentinel-secrets`. SRE and PR Review own their
-model and Kafka credentials.
-All Sentinel credentials live in the single 1Password item `sentinel`, and each `sentinel-secrets` key matches its
-field name. Exact field names belong
+credential and reads Sentinel's bucket with a copy of Sentinel's S3 credential in its own `knowledge-secrets`. SRE and PR
+Review own their model and Kafka credentials.
+Every component in `agents` has its own 1Password item and Secret: `sentinel` (`sentinel-secrets`), `knowledge`
+(`knowledge-secrets`), `shed` (`shed-secrets`, a copy of Sentinel's database and Kafka passwords), and `stonks`
+(`stonks-secrets`); each Secret key matches its field name. Exact field names belong
 in current settings classes and ExternalSecrets, not in long-lived examples.
 
 S3 context is grouped by repository under `context/<repository>/`. Mandatory agent prompts
@@ -41,7 +42,7 @@ Knowledge indexing has a separate lifecycle from prompt refresh.
 
 HOME, KUBECONFIG, and mounted service-account material belong in the container/deployment
 environment. Only the SRE pod (both agents) and the sentinel-executor pod mount a service-account token; the API
-and workflow pods do not. The SRE pod runs as the `sre` service account, whose kubeconfig grants only the read-only `sre-read` ClusterRole;
+and workflow pods do not. The SRE pod runs as the `sentinel-sre` service account, whose kubeconfig grants only the read-only `sentinel-sre` ClusterRole;
 sentinel-executor's grants only the manual-action operations of its `sentinel-executor` ClusterRole. Workers use internal cluster Services, not public ingress.
 
 ## Build and release
@@ -85,7 +86,7 @@ deployment, and knowledge indexing.
 Startup: check Secret delivery, YAML validation, prompt objects, model connectivity,
 PostgreSQL platform state, the knowledge service's readiness,
 and Kafka authentication/topic existence. The Shed API's health/version (the `shed` Deployment, from the shed chart,
-which mounts `sentinel-config`) and the UI's `domains.json` must be reachable; check the workflow pod, the sentinel-executor pod, and Kafka consumption separately.
+which mounts its own `shed-config`) and the UI's `domains.json` must be reachable; check the workflow pod, the sentinel-executor pod, and Kafka consumption separately.
 
 Missing work: trace monitoring or GitHub discovery, request and command topics, consumer lag,
 worker logs, active state, stored decision, and notification. A blocked

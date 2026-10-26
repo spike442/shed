@@ -4,9 +4,6 @@ image:
 
 secret: knowledge-secrets
 
-domainSecrets:
-  sentinel: sentinel-secrets
-
 clickhouse:
   host: clickhouse.database.svc.cluster.local
   database: knowledge
@@ -18,7 +15,3 @@ s3:
 
 networkPolicy:
   enabled: true
-  clients:
-    - app.kubernetes.io/name: sentinel
-      app.kubernetes.io/role: workflow
-    - app.kubernetes.io/name: sre

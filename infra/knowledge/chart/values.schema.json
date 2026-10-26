@@ -1,56 +1,33 @@
 {
   "$schema": "https://json-schema.org/draft-07/schema#",
   "type": "object",
-  "required": ["image", "secret", "domainSecrets", "clickhouse", "s3", "networkPolicy"],
   "additionalProperties": false,
+  "required": ["image", "secret", "clickhouse", "s3", "networkPolicy"],
   "properties": {
     "global": {"type": "object"},
     "image": {
-      "type": "object",
-      "required": ["repository", "tag"],
-      "additionalProperties": false,
-      "properties": {
-        "repository": {"type": "string", "minLength": 1},
-        "tag": {"type": "string"}
-      }
+      "type": "object", "additionalProperties": false, "required": ["repository"],
+      "properties": {"repository": {"$ref": "#/definitions/name"}, "tag": {"type": "string"}}
     },
-    "secret": {"type": "string", "minLength": 1},
-    "domainSecrets": {
-      "type": "object",
-      "minProperties": 1,
-      "propertyNames": {"pattern": "^[a-z][a-z0-9_]*$"},
-      "additionalProperties": {"type": "string", "minLength": 1}
-    },
+    "secret": {"$ref": "#/definitions/name"},
     "clickhouse": {
-      "type": "object",
-      "required": ["host", "database", "user"],
-      "additionalProperties": false,
+      "type": "object", "additionalProperties": false, "required": ["host", "database", "user"],
       "properties": {
-        "host": {"type": "string", "minLength": 1},
+        "host": {"$ref": "#/definitions/name"},
         "database": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"},
-        "user": {"type": "string", "minLength": 1}
+        "user": {"$ref": "#/definitions/name"}
       }
     },
     "s3": {
-      "type": "object",
-      "required": ["endpoint", "region"],
-      "additionalProperties": false,
-      "properties": {
-        "endpoint": {"type": "string", "minLength": 1},
-        "region": {"type": "string", "minLength": 1}
-      }
+      "type": "object", "additionalProperties": false, "required": ["endpoint", "region"],
+      "properties": {"endpoint": {"$ref": "#/definitions/name"}, "region": {"$ref": "#/definitions/name"}}
     },
     "networkPolicy": {
-      "type": "object",
-      "required": ["enabled", "clients"],
-      "additionalProperties": false,
-      "properties": {
-        "enabled": {"type": "boolean"},
-        "clients": {
-          "type": "array",
-          "items": {"type": "object", "minProperties": 1, "additionalProperties": {"type": "string"}}
-        }
-      }
+      "type": "object", "additionalProperties": false, "required": ["enabled"],
+      "properties": {"enabled": {"type": "boolean"}}
     }
+  },
+  "definitions": {
+    "name": {"type": "string", "minLength": 1}
   }
 }

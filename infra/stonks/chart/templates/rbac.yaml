@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ServiceAccount
+{{ include "stonks.metadata" (dict "root" . "name" "stonks") }}
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+{{ include "stonks.metadata" (dict "root" . "name" "stonks-spark") }}
+---
+{{ include "stonks.role" (dict "root" . "name" "stonks-spark-runtime" "component" "stonks-spark" "account" "stonks-spark" "rules" (list
+  (dict "apiGroups" (list "") "resources" (list "pods" "services" "configmaps" "persistentvolumeclaims") "verbs" (list "get" "list" "watch" "create" "delete" "patch")))) }}
+---
+{{ include "stonks.role" (dict "root" . "name" "stonks-airflow" "account" .Values.airflow.serviceAccount "accountNamespace" .Values.airflow.namespace "rules" (list
+  (dict "apiGroups" (list "") "resources" (list "pods") "verbs" (list "get" "list" "watch" "create" "delete" "patch"))
+  (dict "apiGroups" (list "") "resources" (list "pods/log") "verbs" (list "get" "list"))
+  (dict "apiGroups" (list "") "resources" (list "events") "verbs" (list "get" "list" "watch"))
+  (dict "apiGroups" (list "sparkoperator.k8s.io") "resources" (list "sparkapplications" "sparkapplications/status") "verbs" (list "get" "list" "watch" "create" "delete" "patch" "update")))) }}

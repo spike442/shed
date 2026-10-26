@@ -1,0 +1,4 @@
+kafka:
+  security_protocol: SASL_PLAINTEXT
+  sasl_mechanisms: SCRAM-SHA-512
+  max_poll_interval_seconds: 300
